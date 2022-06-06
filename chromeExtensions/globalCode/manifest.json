@@ -1,0 +1,16 @@
+{
+	"name": "globalCode",
+	"description": "Par @Johan_Stickman - Pour EcoCast | Rajoute du CSS et du JS dans toute les pages",
+	"version": "1.0.0",
+	"manifest_version": 3,
+	"content_scripts": [{
+		"matches": ["<all_urls>"],
+		"css": ["animate.min.css","style.css"],
+		"js": ["functionInjector.js"],
+		"run_at": "document_idle"
+	}],
+	"web_accessible_resources": [{
+		"resources": ["index.js"],
+		"matches": ["<all_urls>"]
+	}]
+}

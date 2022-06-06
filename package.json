@@ -1,0 +1,25 @@
+{
+	"name": "ecocast",
+	"version": "0.1.0-beta",
+	"description": "Comme un Chromecast, mais en tant que logiciel.",
+	"main": "index.js",
+	"scripts": {
+		"dev": "nodemon index.js",
+		"gen": "node index.js"
+	},
+	"author": "JohanStickman",
+	"license": "MIT",
+	"dependencies": {
+		"express": "^4.17.3",
+		"loudness": "^0.4.1",
+		"puppeteer": "^13.7.0",
+		"socket.io": "^4.4.1"
+	},
+	"nodemonConfig": {
+		"ignore": [
+			"public/*",
+			"chromeUserData/*",
+			"chromeExtensions/*"
+		]
+	}
+}

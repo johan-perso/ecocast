@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html data-theme="dark" style="background: #070707;">
+<head>
+	<!-- Quelques trucs -->
+	<title>Télécommande EcoCast</title>
+	<meta charset="UTF-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link href="https://firebasestorage.googleapis.com/v0/b/storage-bf183.appspot.com/o/otherContent%2Fstyle.css?alt=media" rel="stylesheet">
+	<link href="https://cdn.jsdelivr.net/gh/hung1001/font-awesome-pro@4cac1a6/css/all.css" rel="stylesheet" type="text/css"/>
+	<link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+	<script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+
+	<!-- Un peu de JS -->
+	<script>
+		// Demander sur l'écran un code d'association
+		fetch('/api/promptCode', { method: 'POST' })
+
+		// Préparer la variable contenant le socket et le code unique
+		var socket;
+		var uniqueCode;
+
+		// Quand on tente de se connecter au socket
+		async function connectToSocket(code){
+			// Se connecter au socket
+			socket = io("/socket", { query: { uniqueCode: code } });
+			uniqueCode = code
+
+			// Quand on reçoit une erreur
+			socket.on('error', function(error){
+				alert(error)
+			})
+
+			// Masquer la demande de code
+			document.getElementById('askAssociationCodeContainer').classList.add('animate__animated', 'animate__fadeOut')
+			document.getElementById('associationCodeBackgroundOpacity').classList.add('animate__animated', 'animate__fadeOut')
+			setTimeout(() => {
+				document.getElementById('askAssociationCodeContainer').remove()
+				document.getElementById('associationCodeBackgroundOpacity').remove()
+			}, 500)
+		}
+
+		// Quand la page est chargée
+		window.onload = async function(){
+			// Quand on clique sur l'opad
+			document.getElementById('opad').onclick = function(){
+				// De quel côté de l'image on a cliqué
+				var x = event.clientX - this.offsetLeft
+				var y = event.clientY - this.offsetTop
+
+				// Déterminer de quel côté on a cliqué
+				var side = 'middle'
+				if(x < 53 && x > 0) side = 'left'
+				if(x > 198 && x < 256) side = 'right'
+				if(y < 65 && y > 0) side = 'up'
+				if(y > 206 && y < 256) side = 'down'
+
+				// Envoyer la commande
+				socket.emit('opad', side)
+			}
+
+			// Quand on clique sur un bouton de contrôle
+			Array.from(document.querySelectorAll('.controlButton')).forEach((button) => {
+				button.onclick = function(){
+					socket.emit('control', this.getAttribute('actionName'))
+				}
+			})
+
+			// Quand on entre quelques choses dans le clavier virtuel
+			document.getElementById('virtualKeyboardInput').oninput = function(event){
+				// Obtenir le charcode
+				var key = event.data.charCodeAt(0)
+
+				// Si on appuie sur entrer ou backspace
+				if(key == 13 || key == 8) return;
+
+				// Clear l'input
+				document.getElementById('virtualKeyboardInput').value = ''
+
+				// Envoyer la touche
+				socket.emit('control', `keyboard_${key}`)
+			}
+			document.getElementById('virtualKeyboardInput').onkeydown = function(event){
+				// Obtenir le charcode
+				var key = 
+				(
+					(event.keyCode || event.charCode) != '229'
+				) ?
+				(event.keyCode || event.charCode) : (
+					event?.originalEvent?.data?.charCodeAt(0) ||
+					event?.target?.value?.charAt((event?.target?.selectionStart == 0 ? 1 : event?.target?.selectionStart) - 1)?.charCodeAt()
+				)
+
+				// Si on appuie pas sur entrer ou backspace
+				if(key != 13 && key != 8) return;
+
+				// Clear l'input
+				document.getElementById('virtualKeyboardInput').value = ''
+
+				// Envoyer la touche
+				socket.emit('control', `keyboard_${key}`)
+			}
+		}
+
+		// Fonction pour passer en mode launcher
+		function showLauncher(){
+			// Masquer certains élements
+			document.getElementById('opadMain').classList.add('hidden')
+			document.getElementById('controlButtonContainer').classList.add('hidden')
+
+			// Modifier le bouton de gauche
+			document.getElementById('upperButton_right').innerHTML = '<i style="font-size: 1.2rem;" class="center fas fa-arrow-left" style="color: #fff;"></i>'
+			document.getElementById('upperButton_right').setAttribute('onclick', 'showRemote()')
+
+			// Afficher le launcher
+			document.getElementById('launcherContainer').classList.remove('hidden')
+		}
+
+		// Fonction pour passer en mode télécommande
+		function showRemote(){
+			// Masquer le launcher
+			document.getElementById('launcherContainer').classList.add('hidden')
+
+			// Afficher certains élements
+			document.getElementById('opadMain').classList.remove('hidden')
+			document.getElementById('controlButtonContainer').classList.remove('hidden')
+
+			// Modifier le bouton de gauche
+			document.getElementById('upperButton_right').innerHTML = '<i style="font-size: 1.2rem;" class="center fas fa-bars" style="color: #fff;"></i>'
+			document.getElementById('upperButton_right').setAttribute('onclick', 'showLauncher()')
+		}
+
+		// Fonction pour lancer une application
+		async function startApp(element){
+			// Prendre le parent de l'élement
+			var parent = element.parentElement
+
+			// Obtenir le span parmis les enfants
+			var span = parent.getElementsByTagName('span')[0]
+			span = span.innerText
+
+			// Envoyer la commande au socket
+			socket.emit('startApp', span.toLowerCase())
+
+			// Retourner sur le menu de la télécommande
+			showRemote()
+		}
+
+		// Fonction pour faire une capture d'écran
+		async function doScreenshot(){
+			// Faire une requête pour obtenir le screenshot en base64
+			var screenshot = await fetch(`/api/screenshot?code=${uniqueCode}`).then(res => res.text())
+			
+			// Ajouter dans le body la capture d'écran
+			document.body.innerHTML += `<div id="screenshotBackgroundOpacity" class="absolute bg-black opacity-40 inset-0 z-0"></div><div id="showScreenshot" class="fixed bg-gray-800 rounded-xl px-2 py-2 text-center" style="max-width: 94%"><svg onclick="closeScreenshot()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="float-right hover:text-gray-400"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg><img src="${screenshot}" class="px-1 mt-8 mb-2 rounded-xl mx-auto" width="1280" height="720"></div>`
+		}
+
+		// Si on clique ailleurs que dans le modal de la capture, la fermer
+		document.addEventListener('click', (event) => {
+			// Vérifier que la capture d'écran est affichée
+			if(document.getElementById('showScreenshot')){
+				// Si on clique dans le modal/un de ses enfants, ne rien faire
+				if(document.getElementById('showScreenshot').contains(event.target)) return;
+
+				// Sinon, fermer le modal
+				closeScreenshot()
+			}
+		})
+
+		// Si on appuie sur échap
+		document.addEventListener('keydown', (event) => {
+			// Vérifier que la capture d'écran est affichée
+			if(document.getElementById('showScreenshot')){
+				// Si on appuie sur échap, fermer le modal
+				if(event.keyCode == 27) closeScreenshot()
+			}
+		})
+
+		// Fonction pour fermer le modal de la capture d'écran
+		function closeScreenshot(){
+			document.getElementById('showScreenshot').remove()
+			document.getElementById('screenshotBackgroundOpacity').remove()
+		}
+
+		// Fonction pour afficher le clavier virtuelle
+		async function showVirtualKeyboard(){
+			// Obtenir l'input invisible (pour afficher le clavier sur mobile)
+			var virtualKeyboardInput = document.getElementById('virtualKeyboardInput')
+
+			// Le rendre "visible" (plutôt accessible)
+			virtualKeyboardInput.removeAttribute('hidden')
+
+			// Mettre le focus
+			virtualKeyboardInput.focus()
+		}
+
+		// Fonction pour se déconnecter
+		async function powerOff(){
+			// Déconnecter le socket
+			await socket.destroy()
+
+			// Remplacer tout les éléments du body par un texte
+			document.body.innerHTML = `<p class="text-yellow-500 font-mono text-xl text-center px-2">It's now safe to close this tab.</p><p class="text-gray-500 opacity-20 text-md text-center px-2 fixed bottom-2">windows 95 vibes</p>`
+		}
+	</script>
+
+	<!-- Un peu de CSS -->
+	<style>
+		/* Police d'écriture */
+		p,h1,h2,h3,h4,h5,h6,span {
+			font-family: 'Inter';
+		}
+
+		/* Body qui prend toute la place */
+		:root {
+    		--app-height: 100%;
+		}
+
+		body {
+			width: 100vw;
+			height: 92vh;
+		}
+
+		/* Centrer un div (sans flex) */
+		.center {
+			display: grid;
+			grid-template-columns: 1fr;
+			grid-template-rows: 1fr;
+			grid-template-areas: "center";
+			justify-items: center;
+			align-items: center;
+		}
+
+		/* Bouton de contrôles */
+		.controlButtonContainer {
+			display: grid;
+			grid-template-columns: repeat(2, 1fr);
+			grid-template-rows: 1fr;
+			grid-column-gap: 0px;
+			grid-row-gap: 0px;
+		}
+		.right-controlButton { grid-area: 1 / 1 / 4 / 2; }
+		.left-controlButton { grid-area: 1 / 2 / 4 / 3; }
+	</style>
+
+	<!-- Meta tag pour les réseaux -->
+	<meta property="og:title" content="EcoCast">
+</head>
+<body class="grid place-items-center">
+	<!-- Boutons du haut -->
+	<div id="upperButtons">
+		<button id="upperButton_right" onclick="showLauncher()" class="absolute left-4 top-4 rounded-full center" style="box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25), inset 0px 2px 1px rgba(255, 255, 255, 0.06); background-color: #1C1C1D; width: 48px; height: 48px;"><i style="font-size: 1.2rem;" class="center fas fa-bars" style="color: #fff;"></i></button>
+		<button id="upperButton_left" onclick="powerOff()" class="absolute right-4 top-4 rounded-full center" style="box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25), inset 0px 2px 1px rgba(255, 255, 255, 0.06); background-color: #1C1C1D; width: 48px; height: 48px;"><i style="font-size: 1.2rem;" class="center fas fa-power-off" style="color: #fff;"></i></button>
+	</div>
+
+	<!-- Opad -->
+	<div id="opadMain">
+		<img id="opad" src="./opad.png" width="256" height="256">
+	</div>
+
+	<!-- Demander un code de connexion -->
+	<div id="associationCodeBackgroundOpacity" class="absolute bg-black opacity-40 inset-0 z-0"></div>
+	<div id="askAssociationCodeContainer" class="fixed bg-gray-800 rounded-xl py-12 px-1 grid place-items-center text-center" style="width: 94%">
+		<h1 class="text-3xl font-semibold">Se connecter</h1>
+		<p class="mt-1 px-2 text-md md:text-lg">Pour vous connecter, entrer le code qui s'affiche sur votre écran</p>
+		<input onkeypress="if(event.keyCode == 13){ this.focus(); event.preventDefault(); connectToSocket(this.value) }" class="mt-4 input w-full text-center" style="max-width: 50%;" id="associationCode" type="number" placeholder="Code à 6 chiffres">
+	</div>
+
+	<!-- Drawer/launcher d'applications -->
+	<div id="launcherContainer" class="p-4 w-full absolute top-20 hidden">
+		<!-- Launcher d'applications -->
+		<div>
+			<div style="background-color: #232323; box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);" class="rounded-xl w-full py-6 px-4 space-y-4 center">
+				<!-- Première rangée -->
+				<div class="flex space-x-4">
+					<div class="center">
+						<img onclick="startApp(this)" width="64" height="64" src="./appsIcon/youtube.jpg" class="rounded-full w-16 h-16 cursor-pointer">
+						<span class="text-sm mt-1 center">YouTube</span>
+					</div>
+					<div class="center">
+						<img onclick="startApp(this)" width="64" height="64" src="./appsIcon/ratp.png" class="rounded-full w-16 h-16 cursor-pointer">
+						<span class="text-sm mt-1 center">RATP</span>
+					</div>
+					<div class="center">
+						<img onclick="doScreenshot()" width="64" height="64" src="./appsIcon/screenshot.png" class="rounded-full w-16 h-16 cursor-pointer">
+						<span class="text-sm mt-1 center">Capture</span>
+					</div>
+				</div>
+
+				<!-- Deuxième rangée -->
+				<div class="flex space-x-4">
+					<div class="center">
+						<img onclick="startApp(this)" width="64" height="64" src="./appsIcon/spotify.png" class="rounded-full w-16 h-16 cursor-pointer">
+						<span class="text-sm mt-1 center">Spotify</span>
+					</div>
+					<div class="center">
+						<img onclick="startApp(this)" width="64" height="64" src="./appsIcon/disneyplus.jpg" class="rounded-full w-16 h-16 cursor-pointer">
+						<span class="text-sm mt-1 center">Disney+</span>
+					</div>
+					<div class="center">
+						<img onclick="startApp(this)" width="64" height="64" src="./appsIcon/twitch.jpg" class="rounded-full w-16 h-16 cursor-pointer">
+						<span class="text-sm mt-1 center">Twitch</span>
+					</div>
+				</div>
+
+				<!-- Troisième rangée -->
+				<div class="flex space-x-4">
+					<div class="center">
+						<img onclick="startApp(this)" width="64" height="64" src="./appsIcon/molotov.jpg" class="rounded-full w-16 h-16 cursor-pointer">
+						<span class="text-sm mt-1 center">Molotov</span>
+					</div>
+					<div class="center">
+						<a href="https://contact.johanstickman.com" target="_blank"><img width="64" height="64" src="./appsIcon/plus.png" class="rounded-full w-16 h-16 cursor-pointer"></a>
+						<span class="text-sm mt-1 center">Suggérer</span>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Bouton pour afficher un clavier virtuelle -->
+		<div class="absolute bottom-0 right-0 mb-4 mr-4">
+			<button onclick="showVirtualKeyboard()" class="bg-gray-800 px-4 py-2 md:px-8 md:py-4 text-white" style="border-top-left-radius: 99999px;">
+				<i class="fas fa-keyboard relative top-1 left-1 md:left-2 md:text-3xl"></i>
+			</button>
+		</div>
+	</div>
+
+	<!-- Boutons de contrôles -->
+	<div id="controlButtonContainer" style="width: 256px;">
+		<div class="controlButtonContainer">
+			<div class="right-controlButton" style="margin-left: 0; margin-right: auto; max-width: 100px;">
+				<button actionName="back" class="controlButton rounded-full mr-4 mb-4" style="box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25), inset 0px 2px 1px rgba(255, 255, 255, 0.06); background-color: #1C1C1D; width: 100px; height: 100px;"><i style="font-size: 2rem;" class="center fas fa-angle-left" style="color: #fff;"></i></button>
+				<button actionName="pause" class="controlButton rounded-full mr-4 mb-4" style="box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25), inset 0px 2px 1px rgba(255, 255, 255, 0.06); background-color: #1C1C1D; width: 100px; height: 100px;"><i style="font-size: 1.2rem;" class="center fas fa-pause" style="color: #fff;"></i></button>
+				<button actionName="mute" class="controlButton rounded-full mr-4" style="box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25), inset 0px 2px 1px rgba(255, 255, 255, 0.06); background-color: #1C1C1D; width: 100px; height: 100px;"><i style="font-size: 1.2rem;" class="center fas fa-volume-slash" style="color: #fff;"></i></button>
+			</div>
+			<div class="left-controlButton" style="margin-left: auto; margin-right: auto; max-width: 100px;">
+				<button actionName="home" class="controlButton rounded-full ml-4 mb-4" style="box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25), inset 0px 2px 1px rgba(255, 255, 255, 0.06); background-color: #1C1C1D; width: 100px; height: 100px;"><i style="font-size: 1.2rem;" class="center fas fa-home" style="color: #fff;"></i></button>
+				<div class="rounded-full ml-4 mb-4" style="box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25), inset 0px 2px 1px rgba(255, 255, 255, 0.06); background-color: #1C1C1D; width: 100px;">
+					<button actionName="volumeUp" class="controlButton mb-2" style="width: 100px; height: 100px;"><i style="font-size: 1.2rem;" class="center fas fa-plus" style="color: #fff;"></i></button>
+					<button actionName="volumeDown" class="controlButton mt-2" style="width: 100px; height: 100px;"><i style="font-size: 1.2rem;" class="center fas fa-minus" style="color: #fff;"></i></button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Clavier virtuelle invisible (permet de faire croire aux mobiles qu'un clavier est présent sur la page) -->
+	<input id="virtualKeyboardInput" autocapitalize="off" hidden type="text" style="width: 0px; height: 0px; background-color: transparent; color: transparent; position: absolute; top: 0px; right: 0px;">
+</body>
+</html>
