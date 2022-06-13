@@ -33,8 +33,8 @@ Vous pourrez ensuite le lancer avec la commande `node index.js`.
 
 | Nom      | Description                                                    | Statut |
 |----------|--------------------------------------------------------------------|----|
-| YouTube  | Permet d'accéder à YouTube TV (version web)                        | ✔️ |
-| RATP     | Affiche en temps réel les heures d'arrivés des bus, RER et métro.  | ❌ |
+| YouTube  | Permet d'accéder à YouTube en affichage TV                         | ✔️ |
+| RATP     | Affiche en temps réel les heures d'arrivés des bus, RER et métro.  | ✔️ |
 | Capture  | Effectue une capture d'écran d'EcoCast                             | ✔️ |
 | Spotify  | Permet d'écouter des musiques via Spotify                          | ❌ |
 | Disney+  | Lance une application Disney Plus                                  | ❌ |
@@ -62,8 +62,6 @@ Cette télécommande virtuelle est le seul élément permettant de contrôler l'
 
 - [ ] Créer un fichier de configuration pour gérer certains paramètres d'EcoCast, similaire à [StickStorage](https://github.com/johan-perso/stickstorage/blob/main/config.example.jsonc).
 - [ ] Contrôle du bluetooth, pour (dé)connecter ses écouteurs sans fil depuis la télécommande virtuelle par exemple.
-- [ ] Caster l'écran de son téléphone vers l'EcoCast.
-- [ ] Transférer le son de l'EcoCast vers un autre appareil en utilisant la télécommande virtuelle.
 - [ ] Développer les applications pour EcoCast
 - [x] Diaporama d'image sur l'écran de veille
 - [x] Générer un code d'association unique pour chaque tentative de connexion
