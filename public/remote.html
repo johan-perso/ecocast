@@ -30,6 +30,25 @@
 				alert(error)
 			})
 
+			// Quand le volume est changé
+			var clearVolumeTimeout;
+			socket.on('volume', function(volume){
+				// Modifier l'indicateur
+				document.getElementById('volumeIndicator_progress').style.height = `${volume}%`
+				document.getElementById('volumeIndicator_number').innerText = volume
+
+				// Afficher l'indicateur
+				document.getElementById('volumeIndicator').classList.remove('hidden')
+
+				// Supprimer l'ancien timeout si il existe
+				if(clearVolumeTimeout) clearTimeout(clearVolumeTimeout)
+
+				// Le masquer 2 secondes après
+				clearVolumeTimeout = setTimeout(() => {
+					document.getElementById('volumeIndicator').classList.add('hidden')
+				}, 2000)
+			})
+
 			// Masquer la demande de code
 			document.getElementById('askAssociationCodeContainer').classList.add('animate__animated', 'animate__fadeOut')
 			document.getElementById('associationCodeBackgroundOpacity').classList.add('animate__animated', 'animate__fadeOut')
@@ -146,12 +165,22 @@
 		}
 
 		// Fonction pour faire une capture d'écran
-		async function doScreenshot(){
+		async function doScreenshot(element){
+			// Masquer l'icône
+			element.classList.add('hidden')
+
+			// Afficher un loader
+			document.getElementById('screenshotApp_loader').classList.remove('hidden')
+
 			// Faire une requête pour obtenir le screenshot en base64
 			var screenshot = await fetch(`/api/screenshot?code=${uniqueCode}`).then(res => res.text())
-			
+
+			// Réafficher l'icône et enlever le loader
+			element.classList.remove('hidden')
+			document.getElementById('screenshotApp_loader').classList.add('hidden')
+
 			// Ajouter dans le body la capture d'écran
-			document.body.innerHTML += `<div id="screenshotBackgroundOpacity" class="absolute bg-black opacity-40 inset-0 z-0"></div><div id="showScreenshot" class="fixed bg-gray-800 rounded-xl px-2 py-2 text-center" style="max-width: 94%"><svg onclick="closeScreenshot()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="float-right hover:text-gray-400"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg><img src="${screenshot}" class="px-1 mt-8 mb-2 rounded-xl mx-auto" width="1280" height="720"></div>`
+			document.body.innerHTML += `<div id="screenshotBackgroundOpacity" class="absolute bg-black opacity-40 inset-0 z-0"></div><div id="showScreenshot" class="fixed bg-gray-800 rounded-xl px-2 py-2 text-center" style="max-width: 94%"><svg onclick="closeScreenshot()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="float-right hover:text-gray-400"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg><img src="${screenshot}" class="px-1 mt-8 mb-2 rounded-lg mx-auto" width="1280" height="720"></div>`
 		}
 
 		// Si on clique ailleurs que dans le modal de la capture, la fermer
@@ -220,6 +249,10 @@
 			height: 92vh;
 		}
 
+		/* Loader */
+		@keyframes loader-rotate{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+		.loader{border-right-color:transparent;animation:loader-rotate 1s linear infinite}
+
 		/* Centrer un div (sans flex) */
 		.center {
 			display: grid;
@@ -265,6 +298,14 @@
 		<input onkeypress="if(event.keyCode == 13){ this.focus(); event.preventDefault(); connectToSocket(this.value) }" class="mt-4 input w-full text-center" style="max-width: 50%;" id="associationCode" type="number" placeholder="Code à 6 chiffres">
 	</div>
 
+	<!-- Barre de volume sur le côté gauche -->
+	<div id="volumeIndicator" class="absolute left-0 z-0 hidden">
+		<div style="width:50px; height:200px; background: rgba(255,255,255,0.1); backdrop-filter: blur(5px); border-radius: 20px;">
+			<div id="volumeIndicator_progress" style="width:100%; background-color: rgba(255,255,255,0.9); position:absolute; border-bottom-right-radius: 20px; border-bottom-left-radius: 20px; border-top-right-radius: 8px; border-top-left-radius: 8px; bottom:0; height:70%""></div>
+			<p id="volumeIndicator_number" class="grid place-items-center mix-blend-difference">test</p>
+		</div>
+	</div>
+
 	<!-- Drawer/launcher d'applications -->
 	<div id="launcherContainer" class="p-4 w-full absolute top-20 hidden">
 		<!-- Launcher d'applications -->
@@ -281,7 +322,8 @@
 						<span class="text-sm mt-1 center">RATP</span>
 					</div>
 					<div class="center">
-						<img onclick="doScreenshot()" width="64" height="64" src="./appsIcon/screenshot.png" class="rounded-full w-16 h-16 cursor-pointer">
+						<img onclick="doScreenshot(this)" width="64" height="64" src="./appsIcon/screenshot.png" class="rounded-full w-16 h-16 cursor-pointer">
+						<div id="screenshotApp_loader" class="w-8 h-8 border-4 border-teal-600 rounded-full loader hidden"></div>
 						<span class="text-sm mt-1 center">Capture</span>
 					</div>
 				</div>
