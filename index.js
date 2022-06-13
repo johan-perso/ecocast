@@ -79,6 +79,7 @@ app.get('/opad.png', async (req, res) => {
 	res.sendFile(path.join(__dirname, 'public', 'opad.png'));
 })
 app.use('/appsIcon', express.static(path.join(__dirname, 'public', 'appsIcon')));
+app.use('/app/ratp', express.static(path.join(__dirname, 'public', 'ratp-app')));
 
 // Fonction principale
 async function main(){
@@ -443,6 +444,10 @@ async function main(){
 				// Augmenter le volume
 				if(oldVolume > 95) await loudness.setVolume(100);
 				else await loudness.setVolume(oldVolume + 5);
+
+				// Retourner le volume actuelle
+				if(oldVolume > 95) socket.emit('volume', 100);
+				else socket.emit('volume', oldVolume + 5);
 			}
 
 			// Bouton pour baisser le son système
@@ -456,6 +461,10 @@ async function main(){
 				// Baisser le volume
 				if(oldVolume < 6) await loudness.setVolume(1) && await loudness.setMuted(true);
 				else await loudness.setVolume(oldVolume - 5);
+
+				// Retourner le volume actuelle
+				if(oldVolume < 6) socket.emit('volume', 0);
+				else socket.emit('volume', oldVolume - 5);
 			}
 
 			// Bouton pour rendre le son système muet
@@ -465,6 +474,9 @@ async function main(){
 
 				// Inverser le statut
 				await loudness.setMuted(!oldMute)
+
+				// Retourner le volume actuelle
+				socket.emit('volume', oldMute ? await loudness.getVolume() : 0)
 			}
 
 			// Bouton pour mettre pause
@@ -504,7 +516,7 @@ async function main(){
 			if(app == "youtube") await page.goto('https://youtube.com/tv')
 
 			// Si l'application est RATP
-			if(app == "ratp") socket.emit('error', `RATP n'est pas encore supporté, mais vous pourriez le développer vous-même 🙃 https://github.com/johan-perso/ecocast`)
+			if(app == "ratp") await page.goto(`http://${ipAddr}:${server.address().port}/app/ratp/chooseLine.html`)
 
 			// Si l'application est Spotify
 			if(app == "spotify") socket.emit('error', `Spotify n'est pas encore supporté, mais vous pourriez le développer vous-même 🙃 https://github.com/johan-perso/ecocast`)
