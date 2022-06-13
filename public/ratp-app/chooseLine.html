@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html data-theme="dark" style="background-color: #3A86FF">
+<head>
+	<!-- Quelques trucs -->
+	<title>RATP</title>
+	<meta charset="UTF-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
+	<link href="https://firebasestorage.googleapis.com/v0/b/storage-bf183.appspot.com/o/otherContent%2Fstyle.css?alt=media" rel="stylesheet">
+	<link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+
+	<!-- Un peu de JS -->
+	<script>
+		// Quand on actualise la page, enlever les hash
+		window.onbeforeunload = function(event){
+			window.location.hash = "";
+		}
+
+		// Quand la page finit de charger, simuler un changement de hash
+		window.onload = function(){
+			window.dispatchEvent(new HashChangeEvent("hashchange"))
+		}
+
+		// Quand le hash de la page change
+		window.onhashchange = function(){
+			// Si le hash est commence par #chooseTransport
+			if(window.location.hash.startsWith("#chooseTransport-")){
+				// Obtenir le type de transport
+				var transportType = decodeURI(window.location.hash.split("#chooseTransport-")[1])
+				if(transportType == 'Bus') transportType = 'buses'
+				if(transportType == 'RER') transportType = 'rers'
+				if(transportType == 'Métro') transportType = 'metros'
+				if(transportType == 'Tramway') transportType = 'tramways'
+
+				// Masquer la liste des types de transports
+				document.getElementById('transportList').classList.add('hidden')
+
+				// Modifier le placeholder de certains title
+				document.getElementById('selectLine_inputNumber').setAttribute('placeholder', `${transportType == 'buses' ? 'Numéro' : 'Nom'} du ${transportType.replace('buses', 'bus').replace('rers','RER').replace('metros','métro').replace('tramways', 'tramway')}`)
+
+				// Afficher la sélection de la ligne
+				document.getElementById('selectLine').classList.remove('hidden')
+
+				// Modifier le titre
+				document.getElementById('title').innerText = 'Choisissez une ligne'
+
+				// Mettre le focus sur l'input du numéro de ligne
+				document.getElementById('selectLine_inputNumber').focus()
+
+				// Définir le nom du transport
+				document.getElementById('selectLine').setAttribute('selectedTransport', transportType)
+			}
+		
+			// Si il n'y a pas de hash, retourner à l'accueil
+			if(window.location.hash == ""){
+				// Afficher la liste des types de transports
+				document.getElementById('transportList').classList.remove('hidden')
+
+				// Afficher la sélection de la ligne
+				document.getElementById('selectLine').classList.add('hidden')
+
+				// Modifier le titre
+				document.getElementById('title').innerText = 'Choisissez un transport'
+			}
+		}
+
+		// Quand on appuie sur une touche
+		document.onkeydown = async function(e){
+			// Si c'est la flèche du bas, on focus le prochain enfant
+			if(e.keyCode == 40){
+				// Obtenir l'élement dans le focus
+				var element = document.activeElement;
+
+				// Si c'est un transport ou un choix de ligne
+				if(document.querySelector('#transportList').contains(element) || document.querySelector('#selectLine').contains(element)){
+					// Obtenir le prochain enfant
+					var next = element.nextElementSibling;
+
+					// Si il n'y en a pas, on arrête
+					if(next == null) return;
+
+					// Sinon, on focus
+					next.focus();
+				}
+
+				// Sinon, mettre le focus sur le premier élement
+				else {
+					if(!document.querySelector('#transportList').classList.contains('hidden')) document.querySelector('#transportList').children[0].focus()
+					else if(!document.querySelector('#selectLine').classList.contains('hidden')) document.querySelector('#selectLine').children[0].focus()
+				};
+			}
+
+			// Si c'est la flèche du haut, on focus le précédent enfant
+			else if(e.keyCode == 38){
+				// Obtenir l'élement dans le focus
+				var element = document.activeElement;
+
+				// Si c'est un transport ou un choix de ligne
+				if(document.querySelector('#transportList').contains(element) || document.querySelector('#selectLine').contains(element)){
+					// Obtenir le précédent enfant
+					var previous = element.previousElementSibling;
+
+					// Si il n'y en a pas, on arrête
+					if(previous == null) return;
+
+					// Sinon, on focus
+					previous.focus();
+				}
+
+				// Sinon, mettre le focus sur le premier élement
+				else {
+					if(!document.querySelector('#transportList').classList.contains('hidden')) document.querySelector('#transportList').children[0].focus()
+					else if(!document.querySelector('#selectLine').classList.contains('hidden')) document.querySelector('#selectLine').children[0].focus()
+				};
+			}
+
+			// Si c'est la flèche de gauche, aller au début
+			else if(e.keyCode == 37){
+				if(!document.querySelector('#transportList').classList.contains('hidden')) document.querySelector('#transportList').children[0].focus()
+				else if(!document.querySelector('#selectLine').classList.contains('hidden')) document.querySelector('#selectLine').children[0].focus()
+			}
+
+			// Si c'est la flèche de droite, aller à la fin
+			else if(e.keyCode == 39){
+				if(!document.querySelector('#transportList').classList.contains('hidden')) document.querySelector('#transportList').children[document.querySelector('#transportList').children.length - 1].focus();
+				else if(!document.querySelector('#selectLine').classList.contains('hidden')) document.querySelector('#selectLine').children[document.querySelector('#selectLine').children.length - 1].focus();
+			}
+
+			// Si on appuie sur enter, on choisit le transport
+			else if(e.keyCode == 13){
+				// Obtenir l'élement dans le focus
+				var element = document.activeElement;
+
+				// Si c'est un transport
+				if(document.querySelector('#transportList').contains(element)) window.location.hash = `#chooseTransport-${element.querySelector('p').innerText}`
+
+				// Sinon, si la sélection de ligne est affiché
+				else if(!document.querySelector('#selectLine').classList.contains('hidden')){
+					// Si l'élement actuellement focus est le premier input, focus le prochain
+					if(element.id == 'selectLine_inputNumber') return document.getElementById('selectLine_inputNumber').nextElementSibling.focus();;
+
+					// Utiliser une API pour vérifier si les informations sont valides
+					if(document.getElementById('selectLine').getAttribute('selectedTransport').length && document.getElementById('selectLine_inputNumber').value.length) var checkInfoValid = await fetch(`https://api-ratp.pierre-grimaud.fr/v4/lines/${document.getElementById('selectLine').getAttribute('selectedTransport')}/${document.getElementById('selectLine_inputNumber').value}`).then(res => res.json())
+					else var checkInfoValid = { result: { message: 'Veuillez compléter les informations' } }
+
+					// Si il y a une erreur
+					if(checkInfoValid?.result?.message){
+						// Afficher le sous-titre
+						document.getElementById('subtitle').innerText = checkInfoValid.result.message.replace('Bad request. ','')
+						document.getElementById('subtitle').classList.remove('hidden')
+
+						// Retourner
+						return
+					}
+
+					// Obtenir toute les stations
+					var stations = await fetch(`https://api-ratp.pierre-grimaud.fr/v4/stations/${document.getElementById('selectLine').getAttribute('selectedTransport')}/${document.getElementById('selectLine_inputNumber').value}`).then(res => res.json())
+
+					// Si il y a une erreur
+					if(stations?.result?.message){
+						// Afficher le sous-titre
+						document.getElementById('subtitle').innerText = stations.result.message.replace('Bad request. ','')
+						document.getElementById('subtitle').classList.remove('hidden')
+
+						// Retourner
+						return
+					}
+
+					// Sinon, vérifier que la station est valide
+					else if(!stations.result.stations.find(station => station.name == document.getElementById('selectLine_inputStation').value)){
+						// Si la station n'existe pas, en chercher une similaire avec FuseJS
+						var fuse = new Fuse(stations?.result?.stations, {
+							keys: ['name'],
+							threshold: 0.3,
+							distance: 1000
+						});
+						var search = fuse.search(document.getElementById('selectLine_inputStation').value)
+
+						// Si il y a une station similaire
+						if(search.length) document.getElementById('selectLine_inputStation').value = search[0]?.item?.name
+
+						// Sinon, afficher le sous-titre
+						else {
+							document.getElementById('subtitle').innerText = 'La station n\'existe pas'
+							document.getElementById('subtitle').classList.remove('hidden')
+							return
+						}
+					}
+
+					// Obtenir le slug de la station
+					localStorage.setItem(`${document.getElementById('selectLine').getAttribute('selectedTransport')}_${document.getElementById('selectLine_inputNumber').value}_station`, JSON.stringify(stations?.result?.stations))
+					var slug = stations.result.stations.find(station => station.name == document.getElementById('selectLine_inputStation').value).slug
+
+					// Sinon, on fait une redirection
+					window.location.href = `index.html?type=${document.getElementById('selectLine').getAttribute('selectedTransport')}&line=${document.getElementById('selectLine_inputNumber').value}&station=${slug}`
+				}
+			}
+		}
+	</script>
+
+	<!-- Un peu de CSS -->
+	<style>
+		/* Police d'écriture */
+		p,h1,h2,h3,h4,h5,h6,span {
+			font-family: 'Inter';
+		}
+
+		/* Chaque transport */
+		#transportList div:focus {
+			outline: 2px solid transparent;
+			outline-offset: 2px;
+			box-shadow: var(--tw-ring-inset) 0 0 0 calc(8px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+			--tw-ring-color: rgb(30 64 175);
+		}
+		#transportList div {
+			background-color: #F8F7FF;
+			width: 40%;
+			grid-template-columns: 1fr 0.2fr;
+			display: grid;
+			color: #000;
+			padding-bottom: 2rem;
+			padding-top: 2rem;
+			padding-left: 1rem;
+			padding-right: 1rem;
+			border-radius: 1rem
+		}
+
+		/* Nom du type de transport */
+		.transportType {
+			display: grid;
+			place-items: center;
+			font-weight: 600;
+			font-size: 2.25rem;
+		}
+	</style>
+</head>
+<body class="w-screen h-screen grid" style="grid-template-rows: 0.2fr 1fr;">
+	<!-- Texte supérieure -->
+	<h1 class="grid place-items-center text-black font-bold text-5xl text-center mt-4">
+		<span id="title">Choisissez un transport</span>
+		<span id="subtitle" class="hidden flex items-center justify-center text-black font-semibold text-xl text-center mt-4"></span>
+	</h1>
+
+	<!-- Conteneur principal -->
+	<div id="mainContainer" class="flex items-center justify-center">
+		<!-- Liste des types de transports -->
+		<div id="transportList" class="w-full grid place-items-center gap-2 mt-2">
+			<div onclick="window.location.hash = `#chooseTransport-${this.querySelector('p').innerText}`" tabindex=0>
+				<img src="icons/bus.png" width="17%" height="17%">
+				<p class="transportType">Bus</p>
+			</div>
+			<div onclick="window.location.hash = `#chooseTransport-${this.querySelector('p').innerText}`" tabindex=0>
+				<img src="icons/rer.png" width="17%" height="17%">
+				<p class="transportType">RER</p>
+			</div>
+			<div onclick="window.location.hash = `#chooseTransport-${this.querySelector('p').innerText}`" tabindex=0>
+				<img src="icons/metro.png" width="17%" height="17%">
+				<p class="transportType">Métro</p>
+			</div>
+			<div onclick="window.location.hash = `#chooseTransport-${this.querySelector('p').innerText}`" tabindex=0>
+				<img src="icons/tramway.png" width="17%" height="17%">
+				<p class="transportType">Tramway</p>
+			</div>
+		</div>
+
+		<!-- Pouvoir sélectionner la ligne du transport -->
+		<div selectedTransport="" id="selectLine" class="hidden w-full grid place-items-center gap-2 mt-2">
+			<input id="selectLine_inputNumber" placeholder="Numéro" class="input w-full h-28 text-4xl" style="max-width: 60%">
+			<input id="selectLine_inputStation" placeholder="Nom de la station" class="input w-full h-28 text-4xl" style="max-width: 60%">
+		</div>
+	</div>
+</body>
+</html>
