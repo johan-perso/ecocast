@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html data-theme="dark" style="background-color: #3A86FF">
+<head>
+	<!-- Quelques trucs -->
+	<title>RATP</title>
+	<meta charset="UTF-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link href="https://firebasestorage.googleapis.com/v0/b/storage-bf183.appspot.com/o/otherContent%2Fstyle.css?alt=media" rel="stylesheet">
+	<link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+
+	<!-- Un peu de JS -->
+	<script>
+		// Obtenir un paramètre query par son nom
+		function getUrlParameter(name){
+			name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+			var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+			var results = regex.exec(location.search);
+			return results === null ? '' : decodeURIComponent(results[1]);
+		}
+
+		// Fonction pour attendre un certains temps
+		function wait(delay){
+    		return new Promise((resolve) => setTimeout(resolve, delay));
+		}
+
+		// Fonction pour répéter des requêtes après échec
+		function fetchRetry(url, delay, tries, fetchOptions={}){
+			function onError(err){
+				triesLeft = tries - 1;
+				if(!triesLeft){
+					throw err;
+				}
+				return wait(delay).then(() => fetchRetry(url, delay, triesLeft, fetchOptions));
+			}
+			return fetch(url, fetchOptions).catch(onError);
+		}
+
+		// Fonction pour échapper les caractères spéciaux
+		function escapeHtml(text){
+			// Si y'a pas de texte, le retourner directement
+			if(!text) return text
+
+			// Si c'est pas un string, le retourner directement
+			if(typeof text != 'string') return text
+
+			// Retourner en remplaçant les caractères spéciaux
+			return text?.replace(/&/g, '&amp;')?.replace(/</g, '&lt;')?.replace(/>/g, '&gt;')?.replace(/"/g, '&quot;')?.replace(/'/g, '&#039;')
+		}
+
+		// Quand la page finit de charger
+		window.onload = function() {
+			// Obtenir certaines informations
+			var transportType = getUrlParameter('type').replace('buses','bus').replace('rers','rer').replace('metros','metro').replace('tramways','tramway');
+			var transportLine = getUrlParameter('line');
+			var transportStation = getUrlParameter('station');
+
+			// Obtenir la liste des slugs depuis le stockage local
+			var slugs = JSON.parse(localStorage.getItem(`${getUrlParameter('type')}_${transportLine}_station`));
+
+			// Obtenir le nom de la station (et pas son slug du coup)
+			var cleanTransportStation = slugs.find((element) => {
+				return element.slug == transportStation;
+			})?.name?.replace(/-/g, ' ')
+
+			// Afficher les informations dans la barre supérieure
+			document.getElementById('transportTitle').innerText = `${transportType.charAt(0).toUpperCase() + transportType.slice(1)} ${transportLine}`; // Met la première lettre du type en majuscule, puis le nom de la ligne
+			document.getElementById('stationName').innerText = `${cleanTransportStation}`;
+
+			// Fonction pour actualiser les horaires
+			async function checkSchedule(){
+				// Obtenir les horaires depuis l'API
+				var schedules = await fetchRetry(`https://api-ratp.pierre-grimaud.fr/v4/schedules/${getUrlParameter('type')}/${transportLine}/${transportStation}/A%2BR`, 6000, 6).then(res => res.json())
+				schedules = schedules?.result?.schedules || [];
+
+				// Pour chaque élements dans la liste, n'avoir que 2 élements ayant le même nom "destination"
+				var destinations = [];
+				schedules.forEach((element) => {
+					// N'avoir que 4 élements
+					if(destinations.length == 4) return;
+
+					// Si le nom de la destination est déjà plusieurs fois dans la liste
+					if(destinations.filter((element2) => {
+						return element2.destination == element.destination;
+					}).length > 1){
+						return;
+					}
+
+					// Ajouter l'élément à la liste
+					destinations.push(element);
+				});
+
+				// Vider la liste des horaires
+				if(destinations?.length) document.getElementById('listSchedules').innerHTML = '';
+
+				// Pour chaque horaire
+				if(destinations?.length) destinations.forEach((sch) => {
+					document.getElementById('listSchedules').innerHTML += `<div><p class="text-left ml-4 text-3xl font-semibold">${escapeHtml(sch.destination.replace(/-/g, ' '))}</p><p class="text-right mr-4 text-3xl font-bold">${escapeHtml(sch.message.replace('mn', 'min').replace('Train à quai', 'À quai').replace('Train à l\'approche', 'À l\'approche').replace('Train a quai', 'À quai').replace('Train a l\'approche', 'À l\'approche'))}</p></div>`
+				})
+			}
+
+			// Toutes les secondes, actualiser l'heure
+			setInterval(() => {
+				var date = new Date()
+				var hours = date.getHours()
+				var minutes = date.getMinutes()
+				var time = `${hours}:${minutes}`
+				document.getElementById('hour').innerText = time
+			}, 1000);
+
+			// Toutes les minutes, vérifier les horaires
+			setInterval(() => {
+				checkSchedule();
+			}, 60000); checkSchedule() // mais aussi vérifier une fois immédiatement
+		}
+	</script>
+
+	<!-- Un peu de CSS -->
+	<style>
+		/* Police d'écriture */
+		p,h1,h2,h3,h4,h5,h6,span {
+			font-family: 'Inter';
+		}
+
+		/* Liste des horaires */
+		#listSchedules div {
+			background-color: #F8F7FF;
+			color: black;
+			width: 96%;
+			display: grid;
+			grid-template-columns: 1fr 0.3fr;
+			padding-top: 2.5rem;
+			padding-bottom: 2.5rem;
+			border-radius: 1rem;
+		}
+	</style>
+</head>
+<body class="w-screen h-screen grid" style="grid-template-rows: 0.1fr 1fr;">
+	<!-- Barre supérieure -->
+	<div class="grid place-items-center" style="background-color: #F8F7FF; grid-template-columns: repeat(3, 1fr);">
+		<h1 id="transportTitle" class="w-full text-left ml-10 text-3xl font-bold text-black"></h1>
+		<h1 id="stationName" class="text-center text-3xl font-bold" style="color: #3A86FF"></h1>
+		<div class="grid place-items-end w-full">
+			<span id="hour" class="bg-black mr-8 py-2 px-6 rounded-xl text-3xl font-bold text-white">00:00</span>
+		</div>
+	</div>
+
+	<!-- Liste des horaires -->
+	<div class="flex items-center justify-center">
+		<div id="listSchedules" class="w-full grid place-items-center gap-8 mt-8"></div>
+	</div>
+
+	<!-- Texte tout en bas là -->
+	<p class="absolute bottom-1 left-1 text-black opacity-70 font-light text-xs">Retourner en arrière pour modifier la ligne</p>
+</body>
+</html>
