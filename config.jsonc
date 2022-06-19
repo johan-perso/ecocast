@@ -1,0 +1,27 @@
+{
+	// Port utilisé pour le serveur web | défaut : 3510
+	"port": 3510,
+
+	// Démarrer EcoCast en plein écran | défaut : true
+	"fullScreen": false,
+
+	// Démarrer EcoCast avec bloqueur de publicité | défaut : true
+	"adBlock": true,
+
+	// Masquer le curseur de souris dans EcoCast | défaut : true
+	"hideCursor": true,
+
+	/* Application lancé au démarrage | défaut : sleep
+	    - "sleep" : Ecran de veille
+	    - "youtube" : YouTube
+	    - "ratp" : RATP
+	*/
+	"homePage": "sleep",
+
+	/* Protection lors des tentatives de connexion depuis la télécommande virtuelle | défaut : uniqueCode
+	    - "none" : Aucune protection, connexion par n'importe qui
+	    - "uniqueCode" : Afficher sur l'écran un code unique, à entrer dans la télécommande
+	    - "password:<mot de passe>" : Utiliser un mot de passe pour se connecter
+	*/
+	"associationProtection": "uniqueCode"
+}
