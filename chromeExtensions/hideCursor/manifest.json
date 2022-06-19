@@ -1,0 +1,11 @@
+{
+	"name": "hideCursor",
+	"description": "Par @Johan_Stickman - Pour EcoCast | Masque le curseur de votre PC dans la fenêtre d'EcoCast",
+	"version": "1.0.0",
+	"manifest_version": 3,
+	"content_scripts": [{
+		"matches": ["<all_urls>"],
+		"css": ["style.css"],
+		"run_at": "document_idle"
+	}]
+}
