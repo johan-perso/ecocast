@@ -3,7 +3,7 @@
 	"port": 3510,
 
 	// Démarrer EcoCast en plein écran | défaut : true
-	"fullScreen": false,
+	"fullScreen": true,
 
 	// Démarrer EcoCast avec bloqueur de publicité | défaut : true
 	"adBlock": true,
