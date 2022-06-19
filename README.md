@@ -56,13 +56,72 @@ Pour contrôler votre EcoCast à distance, vous pouvez utiliser une télécomman
 Cette télécommande virtuelle est le seul élément permettant de contrôler l'EcoCast et nécessite un code d'association à chaque connexion.
 
 
+### Configuration
+
+Vous pouvez modifier les paramètres de votre EcoCast à partir du ficheir [`config.jsonc`](https://github.com/johan-perso/ecocast/blob/main/config.jsonc). Les paramètres suivants peuvent être modifiés :
+
+**port**
+
+> Valeur par défaut : `3510`\
+> Type : `number`\
+> Choix : port entre 0 et 65535
+
+Le port utilisé par le serveur web d'EcoCast. Si la variable d'environnement `PORT` est défini, la valeur définie dans la configuration sera ignorée. Si aucune de ces valeurs ne peut s'appliquer, le port `3510` sera utilisé.
+
+**fullScreen**
+
+> Valeur par défaut : `true`\
+> Type : `boolean`\
+> Choix : `true`, `false`
+
+Permet de choisir si EcoCast devrait être démarré en plein écran par défaut, vous pouvez à tout moment activer/désactiver ce mode en appuyant sur F11 lorsque le focus est sur la fenêtre d'EcoCast.
+
+**adBlock**
+
+> Valeur par défaut : `true`\
+> Type : `boolean`\
+> Choix : `true`, `false`
+
+Permet de choisir si EcoCast est démarré avec [un bloqueur de publicité](https://ublockorigin.com/fr) ou non.
+
+**hideCursor**
+
+> Valeur par défaut : `true`\
+> Type : `boolean`\
+> Choix : `true`, `false`
+
+Permet de choisir si le curseur de votre souris devrait être masqué lorsqu'EcoCast est démarré en plein écran.
+
+**homePage**
+
+> Valeur par défaut : `sleep`\
+> Type : `string`\
+> Choix :
+> - `sleep` : Ecran de veille, affiche un diaporama d'images ainsi que l'heure et la date
+> - `youtube` : Lance l'application YouTube
+> - `ratp` : Lance l'application RATP
+
+Modifie l'application qui se lance au démarrage d'EcoCast.
+
+**associationProtection**
+
+> Valeur par défaut : `uniqueCode`\
+> Type : `string`\
+> Choix :
+> - `none` : Désactive la protection d'association, permet à n'importe qui d'utiliser la télécommande virtuelle pour se connecter à EcoCast
+> - `uniqueCode` : Génère sur votre écran d'EcoCast un code unique à 6 chiffres, à entrer dans la télécommande pour effectuer une connexion
+> - `password:<le mot de passe que vous voulez>` : Demande un mot de passe à chaque connexion depuis la télécommande virtuelle
+
+Modifie le type de protection utilisé lors de l'association à la télécommande virtuelle.
+
+
 ### Roadmap
 
 > Si vous souhaiter contribuer à l'amélioration d'EcoCast, vous pouvez créer une [issue](https://github.com/johan-perso/ecocast/issues) pour en parler, ou modifier le code via une pull request.
 
-- [ ] Créer un fichier de configuration pour gérer certains paramètres d'EcoCast, similaire à [StickStorage](https://github.com/johan-perso/stickstorage/blob/main/config.example.jsonc).
 - [ ] Contrôle du bluetooth, pour (dé)connecter ses écouteurs sans fil depuis la télécommande virtuelle par exemple.
-- [ ] Développer les applications pour EcoCast
+- [ ] Développer toute les applications pour EcoCast
+- [x] Créer un fichier de configuration pour gérer certains paramètres d'EcoCast, similaire à [StickStorage](https://github.com/johan-perso/stickstorage/blob/main/config.example.jsonc).
 - [x] Diaporama d'image sur l'écran de veille
 - [x] Générer un code d'association unique pour chaque tentative de connexion
 - [x] Créer des captures d'écran de l'EcoCast, depuis la télécommande virtuelle
