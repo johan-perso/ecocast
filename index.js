@@ -4,6 +4,9 @@ const fs = require('fs');
 const path = require('path');
 const loudness = require('loudness')
 
+// Importer la configuration
+const config = require('jsonc').parse(fs.readFileSync(path.join(__dirname, 'config.jsonc')).toString())
+
 // Importer quelques autres librairies liés au serveur web
 const http = require('http');
 const express = require("express")
@@ -13,8 +16,11 @@ const { Server } = require("socket.io");
 const io = new Server(server);
 
 // Préparer un serveur web avec ExpressJS
-server.listen(process.env.PORT || 3510, () => {
+server.listen(process.env.PORT || config.port || 3510, () => {
+	if(config.port && process.env.PORT && process.env.PORT !== config.port) console.log(`[WARN] La configuration utilise le port ${config.port}, mais celui-ci a aussi été défini dans les variable d'enviroment avec le port ${process.env.PORT}.`)
+	if(!config.port && !process.env.PORT) console.log(`[WARN] La configuration n'a pas de port défini, le port ${server.address().port} a donc été utilisé.`)
 	console.log(`Serveur web démarré sur le port ${server.address().port}`);
+	console.log(`Chemin de la configuration : ${path.join(__dirname, 'config.jsonc')}`)
 })
 
 // Générer un code unique à 6 chiffres pour la connexion à EcoCast depuis un autre appareil
@@ -102,6 +108,19 @@ async function main(){
 		if(localState && localState?.length) fs.writeFileSync(path.join(__dirname, 'chromeUserData', 'Default', 'Local State'), localState);
 	}
 
+	// Préparer la liste des extensions à charger
+		// Préparer un array vide
+		var extensions = [];
+
+		// Ajouter uBlock s'il n'est pas désactivé
+		if(config.adBlock) extensions.push(path.join(__dirname, 'chromeExtensions','uBlockOrigin'))
+
+		// Ajouter hideCursor s'il n'est pas désactivé
+		if(config.hideCursor) extensions.push(path.join(__dirname, 'chromeExtensions','hideCursor'))
+
+		// Rajoute d'autres extension peut importe la configuration
+		extensions.push(path.join(__dirname, 'chromeExtensions','globalCode'))
+
 	// Crée le navigateur
 	browser = await puppeteer.launch({
 		headless: false,
@@ -119,7 +138,8 @@ async function main(){
 			"--disable-infobars",
 			"--disable-translate",
 			"--disable-background-mode",
-			`--load-extension=${path.join(__dirname, 'chromeExtensions','uBlockOrigin')},${path.join(__dirname, 'chromeExtensions','globalCode')}`,
+			`--load-extension=${extensions.join(',')}`,
+			config.fullScreen == true ? "--start-fullscreen" : '',
 		]
 	});
 
@@ -141,11 +161,16 @@ async function main(){
 	Array.from(await browser.pages())[0].close()
 
 	// Naviguer vers le site
-	await page.goto(`http://${ipAddr}:${server.address().port}/sleep`)
+	if(config.homePage == 'youtube') await page.goto(`https://youtube.com/tv`)
+	else if(config.homePage == 'ratp') await page.goto(`http://${ipAddr}:${server.address().port}/app/ratp/chooseLine.html`)
+	else await page.goto(`http://${ipAddr}:${server.address().port}/sleep`)
 
 	// Route pour l'API - générer et afficher un nouveau code unique
 	app.post('/api/promptCode', async (req, res) => {
-		// Si il y a plus de 15 codes dans la liste, supprimer les 5 plus anciens
+		// Si le type de protection n'est pas par code unique
+		if(config.associationProtection != 'uniqueCode') return res.set('Content-Type', 'application/json').send({ error: true, protectionType: (config?.associationProtection?.startsWith('password:') ? 'password' : config.associationProtection), message: "Endpoint désactivé : le type de protection n'est pas par code unique" })
+
+		// s'il y a plus de 15 codes dans la liste, supprimer les 5 plus anciens
 		if(uniquesCodes.length > 15) uniquesCodes.splice(0, 5);
 
 		// Générer un code unique
@@ -167,16 +192,25 @@ async function main(){
 		})
 
 		// Envoyer que le code est affiché à l'écran
-		res.set('Content-Type', 'application/json').send({ error: false, message: "Code généré avec succès" })
+		res.set('Content-Type', 'application/json').send({ error: false, protectionType: (config?.associationProtection?.startsWith('password:') ? 'password' : config.associationProtection), message: "Code généré avec succès" })
 	})
 
 	// Route pour l'API - effectuer une capture d'écran
 	app.get('/api/screenshot', async (req, res) => {
 		// Vérifier qu'un code a été donné
-		if(!req.query.code) return res.set('Content-Type', 'application/json').send({ error: true, message: "Aucun code donné" })
+		if(config.associationProtection != 'none' && !req?.query?.code) return res.set('Content-Type', 'application/json').send({ error: true, message: "Aucun code donné" })
+		var code = req?.query?.code
 
-		// Vérifier que le code est correcte
-		if(!uniquesCodes.includes(req.query.code)) return res.set('Content-Type', 'application/json').send({ error: true, message: "Code incorrect" })
+		// Si le code ne fais pas parti de la liste des codes uniques
+		if(config.associationProtection == 'uniqueCode' && !uniquesCodes.includes(code)){
+			return res.set('Content-Type', 'application/json').send({ error: true, message: "Code incorrect" })
+		}
+
+		// Si la protection est un mot de passe, le vérifier
+		if(config.associationProtection.startsWith('password:')){
+			var password = config.associationProtection.split(':')[1];
+			if(password != code) return res.set('Content-Type', 'application/json').send({ error: true, message: "Mot de passe incorrect" })
+		}
 
 		// Faire une capture d'écran de la page principale
 		var screenshot = await page.screenshot({ encoding: "base64" })
@@ -187,6 +221,9 @@ async function main(){
 
 	// Route pour l'API - supprimer un code
 	app.delete('/api/deleteCode', async (req, res) => {
+		// Si le type de protection n'est pas par code unique
+		if(config.associationProtection != 'uniqueCode') return res.set('Content-Type', 'application/json').send({ error: true, message: "Endpoint désactivé : le type de protection n'est pas par code unique" })
+
 		// Vérifier qu'un code a été donné
 		if(!req.query.code) return res.set('Content-Type', 'application/json').send({ error: true, message: "Aucun code donné" })
 
@@ -200,13 +237,19 @@ async function main(){
 	// Socket pour gérer certains élements d'EcoCast à distance
 	var allSockets = []
 	io.of('/socket').on('connection', async socket => {
-		// Obtenir le code unique dans les queries
-		var uniqueCode = socket.handshake.query.uniqueCode;
+		// Obtenir le code dans les queries
+		var code = socket.handshake.query.uniqueCode;
 
-		// Si le code ne fais pas parti de la liste
-		if(!uniquesCodes.includes(uniqueCode)){
+		// Si le code ne fais pas parti de la liste des codes uniques
+		if(config.associationProtection == 'uniqueCode' && !uniquesCodes.includes(code)){
 			socket.emit('error', "Le code d'association est incorrect, actualiser la page et réessayer.");
 			return socket.disconnect();
+		}
+
+		// Si la protection est un mot de passe, le vérifier
+		if(config.associationProtection.startsWith('password:')){
+			var password = config.associationProtection.split(':')[1];
+			if(password != code) return socket.emit('error', "Le mot de passe est incorrect, actualiser la page et réessayer.") && socket.disconnect();
 		}
 
 		// Sinon, ajouter le socket à la liste
@@ -267,7 +310,6 @@ async function main(){
 
 		// Quand le socket envoie une action de contrôle
 		socket.on('control', async (action) => {
-			console.log(action)
 			// Si l'action commence par "keyboard_"
 			if(action.startsWith("keyboard_")){
 				// Récupérer la valeur de la clé
