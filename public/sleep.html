@@ -15,30 +15,46 @@
 				// Obtenir la liste des images
 				var allImages = await fetch('/wallpaperList').then(res => res.text())
 
-				// Convertir en un array
-				allImages = allImages.split('\n')
+				// Si on a une vidéo à la place
+				if(allImages.startsWith('video:')){
+					var background = document.createElement('video')
+					background.style.position = 'fixed'
+					background.style.top = '0'
+					background.style.left = '0'
+					background.style.width = '100%'
+					background.style.height = '100%'
+					background.style.zIndex = '-1'
+					background.style.objectFit = 'cover'
+					background.autoplay = true
+					background.loop = true
+					background.innerHTML = `<source src="${allImages.substring(6)}">`
+					document.body.appendChild(background)
+				} else {
+					// Convertir en un array
+					allImages = allImages.split('\n')
 
-				// Commencer à un emplacement aléatoire
-				var randomIndex = Math.floor(Math.random() * allImages.length)
+					// Commencer à un emplacement aléatoire
+					var randomIndex = Math.floor(Math.random() * allImages.length)
 
-				// Ajouter l'image en tant que fond
-				var background = document.createElement('img')
-				background.src = allImages[randomIndex]
-				background.style.position = 'fixed'
-				background.style.top = '0'
-				background.style.left = '0'
-				background.style.width = '100%'
-				background.style.height = '100%'
-				background.style.zIndex = '-1'
-				background.style.objectFit = 'cover'
-				document.body.appendChild(background)
-
-				// Toutes les 30 secondes, passer à la prochaine image
-				setInterval(() => {
-					randomIndex = (randomIndex + 1) % allImages.length
+					// Ajouter l'image en tant que fond
+					var background = document.createElement('img')
 					background.src = allImages[randomIndex]
-					console.log(allImages[randomIndex])
-				}, 30000)
+					background.style.position = 'fixed'
+					background.style.top = '0'
+					background.style.left = '0'
+					background.style.width = '100%'
+					background.style.height = '100%'
+					background.style.zIndex = '-1'
+					background.style.objectFit = 'cover'
+					document.body.appendChild(background)
+
+					// Toutes les 30 secondes, passer à la prochaine image
+					setInterval(() => {
+						randomIndex = (randomIndex + 1) % allImages.length
+						background.src = allImages[randomIndex]
+						console.log(allImages[randomIndex])
+					}, 30000)
+				}
 
 			// Si on bouge le curseur de sa souris
 			document.onmousemove = function(e){
@@ -181,6 +197,7 @@
 				padding-bottom: 12px;
 			}
 		}
+		
 	</style>
 
 	<!-- Meta tag pour les réseaux -->
