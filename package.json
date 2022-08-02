@@ -1,6 +1,6 @@
 {
 	"name": "ecocast",
-	"version": "0.3.0-beta",
+	"version": "0.4.0-beta",
 	"description": "Comme un Chromecast, mais en tant que logiciel.",
 	"main": "index.js",
 	"scripts": {
