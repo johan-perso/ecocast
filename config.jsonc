@@ -18,6 +18,12 @@
 	*/
 	"homePage": "sleep",
 
+	/* Type de contenu affiché sur l'écran de veille | défaut : diaporama
+		- "diaporama" : Diaporama d'images
+		- "video:<lien>" : Affiche une vidéo en fond (.webm / .ogg)
+	*/
+	"screensaverType": "diaporama",
+
 	/* Protection lors des tentatives de connexion depuis la télécommande virtuelle | défaut : uniqueCode
 	    - "none" : Aucune protection, connexion par n'importe qui
 	    - "uniqueCode" : Afficher sur l'écran un code unique, à entrer dans la télécommande
