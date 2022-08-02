@@ -79,13 +79,15 @@ app.get('/', async (req, res) => {
 	res.send(fs.readFileSync(path.join(__dirname, 'public', 'remote.html')).toString());
 })
 app.get('/wallpaperList', async (req, res) => {
-	res.send(fs.readFileSync(path.join(__dirname, 'public', 'wallpaperList.txt')).toString());
+	if(config.screensaverType == 'diaporama') res.send(fs.readFileSync(path.join(__dirname, 'public', 'wallpaperList.txt')).toString());
+	if(config.screensaverType.startsWith('video:')) res.send(`video: ${config.screensaverType.replace('video:','')}`);
 })
 app.get('/opad.png', async (req, res) => {
 	res.sendFile(path.join(__dirname, 'public', 'opad.png'));
 })
 app.use('/appsIcon', express.static(path.join(__dirname, 'public', 'appsIcon')));
 app.use('/app/ratp', express.static(path.join(__dirname, 'public', 'ratp-app')));
+app.use('/videos', express.static(path.join(__dirname, 'public', 'videos'))); // Inutilisé, mais j'garde au cas où quelqu'un veut l'utiliser pour servir des vidéos (config.screensaverType)
 
 // Fonction principale
 async function main(){
@@ -128,6 +130,7 @@ async function main(){
 		defaultViewport: null,
 		userDataDir: './chromeUserData',
 		args: [
+			"--autoplay-policy=no-user-gesture-required",
 			"--disable-session-crashed-bubble",
 			"--disable-sync",
 			"--disable-features=Translate",
