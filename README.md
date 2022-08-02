@@ -31,15 +31,15 @@ Vous pourrez ensuite le lancer avec la commande `node index.js`.
 
 ### Applications disponible
 
-| Nom      | Description                                                    | Statut |
-|----------|--------------------------------------------------------------------|----|
-| YouTube  | Permet d'accéder à YouTube en affichage TV                         | ✔️ |
-| RATP     | Affiche en temps réel les heures d'arrivés des bus, RER et métro.  | ✔️ |
-| Capture  | Effectue une capture d'écran d'EcoCast                             | ✔️ |
-| Spotify  | Permet d'écouter des musiques via Spotify                          | ❌ |
-| Disney+  | Lance une application Disney Plus                                  | ❌ |
-| Twitch   | Affiche le site de twitch.tv, optimisé pour TV                     | ❌ |
-| Molotov  | Vous laisse regarder les chaines de télévision                     | ❌ |
+| Nom      | Description                                                        | Statut |
+|----------|--------------------------------------------------------------------|--------|
+| YouTube  | Permet d'accéder à YouTube en affichage TV                         | ✔️     |
+| RATP     | Affiche en temps réel les heures d'arrivés des bus, RER et métro.  | ✔️     |
+| Capture  | Effectue une capture d'écran d'EcoCast                             | ✔️     |
+| Spotify  | Permet d'écouter des musiques via Spotify                          | ❌     |
+| Disney+  | Lance une application Disney Plus                                  | ❌     |
+| Twitch   | Affiche le site de twitch.tv, optimisé pour TV                     | ❌     |
+| Molotov  | Vous laisse regarder les chaines de télévision                     | ❌     |
 
 
 ### Comment ?
@@ -58,7 +58,7 @@ Cette télécommande virtuelle est le seul élément permettant de contrôler l'
 
 ### Configuration
 
-Vous pouvez modifier les paramètres de votre EcoCast à partir du ficheir [`config.jsonc`](https://github.com/johan-perso/ecocast/blob/main/config.jsonc). Les paramètres suivants peuvent être modifiés :
+Vous pouvez modifier les paramètres de votre EcoCast à partir du fichier [`config.jsonc`](https://github.com/johan-perso/ecocast/blob/main/config.jsonc). Les paramètres suivants peuvent être modifiés :
 
 **port**
 
@@ -103,6 +103,16 @@ Permet de choisir si le curseur de votre souris devrait être masqué lorsqu'Eco
 
 Modifie l'application qui se lance au démarrage d'EcoCast.
 
+**screensaverType**
+
+> Valeur par défaut : `diaporama`\
+> Type : `string`\
+> Choix :
+> - `diaporama` : Affiche un diaporama d'images
+> - `video:<lien de la vidéo>` : Affiche une vidéo en boucle sur l'écran d'accueil (.webm / .ogg)
+
+Modifie le type de contenu affiché sur l'écran de veille
+
 **associationProtection**
 
 > Valeur par défaut : `uniqueCode`\
@@ -122,6 +132,7 @@ Modifie le type de protection utilisé lors de l'association à la télécommand
 - [ ] Contrôle du bluetooth, pour (dé)connecter ses écouteurs sans fil depuis la télécommande virtuelle par exemple.
 - [ ] Développer toute les applications pour EcoCast
 - [x] Créer un fichier de configuration pour gérer certains paramètres d'EcoCast, similaire à [StickStorage](https://github.com/johan-perso/stickstorage/blob/main/config.example.jsonc).
+- [x] Afficher des vidéos sur l'écran de veille
 - [x] Diaporama d'image sur l'écran de veille
 - [x] Générer un code d'association unique pour chaque tentative de connexion
 - [x] Créer des captures d'écran de l'EcoCast, depuis la télécommande virtuelle
