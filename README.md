@@ -140,4 +140,4 @@ Modifie le type de protection utilisé lors de l'association à la télécommand
 
 ### Licence
 
-MIT © [Johan](https://johanstickman.com)
+MIT © [Johan](https://johanstick.me)
