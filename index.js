@@ -164,9 +164,9 @@ async function main(){
 	Array.from(await browser.pages())[0].close()
 
 	// Naviguer vers le site
-	if(config.homePage == 'youtube') await page.goto(`https://youtube.com/tv`)
-	else if(config.homePage == 'ratp') await page.goto(`http://${ipAddr}:${server.address().port}/app/ratp/chooseLine.html`)
-	else await page.goto(`http://${ipAddr}:${server.address().port}/sleep`)
+	if(config.homePage == 'youtube') await page.goto(`https://youtube.com/tv`, { timeout: 0 })
+	else if(config.homePage == 'ratp') await page.goto(`http://${ipAddr}:${server.address().port}/app/ratp/chooseLine.html`, { timeout: 0 })
+	else await page.goto(`http://${ipAddr}:${server.address().port}/sleep`, { timeout: 0 })
 
 	// Route pour l'API - générer et afficher un nouveau code unique
 	app.post('/api/promptCode', async (req, res) => {
@@ -549,7 +549,7 @@ async function main(){
 
 			// Bouton pour retourner à l'écran d'accueil
 			if(action == "home"){
-				await page.goto(`http://${ipAddr}:${server.address().port}/sleep`)
+				await page.goto(`http://${ipAddr}:${server.address().port}/sleep`, { timeout: 0 })
 			}
 		})
 
@@ -558,10 +558,10 @@ async function main(){
 			console.log(app)
 
 			// Si l'application est YouTube
-			if(app == "youtube") await page.goto('https://youtube.com/tv')
+			if(app == "youtube") await page.goto('https://youtube.com/tv', { timeout: 0 })
 
 			// Si l'application est RATP
-			if(app == "ratp") await page.goto(`http://${ipAddr}:${server.address().port}/app/ratp/chooseLine.html`)
+			if(app == "ratp") await page.goto(`http://${ipAddr}:${server.address().port}/app/ratp/chooseLine.html`, { timeout: 0 })
 
 			// Si l'application est Spotify
 			if(app == "spotify") socket.emit('error', `Spotify n'est pas encore supporté, mais vous pourriez le développer vous-même 🙃 https://github.com/johan-perso/ecocast`)
