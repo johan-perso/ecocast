@@ -5,12 +5,27 @@
 	<title>EcoCast</title>
 	<meta charset="UTF-8"/>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link href="https://firebasestorage.googleapis.com/v0/b/storage-bf183.appspot.com/o/otherContent%2Fstyle.css?alt=media" rel="stylesheet">
+	<link href="style.css" rel="stylesheet">
 	<link rel="stylesheet" href="https://rsms.me/inter/inter.css">
 
 	<!-- Un peu de JS -->
 	<script>
 		window.onload = async function(){
+			// Obtenir les paramètres de l'URL, et préparer une variable
+			var urlParams = new URLSearchParams(window.location.search)
+			var welcomeScreenStillHere = true;
+
+			// Si on doit passer l'animation
+			if(urlParams.get('skipAnimation') == 'true'){
+				// Enlever l'écran de bienvenue
+				document.querySelector('#welcomeScreen').classList.add('hidden')
+				welcomeScreenStillHere = false;
+
+				// Mettre à jour l'heure et la date
+				editTime()
+				editDate()
+			}
+
 			// Ajouter une image de fond
 				// Obtenir la liste des images
 				var allImages = await fetch('/wallpaperList').then(res => res.text())
@@ -78,7 +93,7 @@
 				// Réafficher l'écran de bienvenue
 				document.querySelector('#welcomeScreen').classList.remove('hidden')
 				document.querySelector('#welcomeScreen').classList.remove('animate__fadeOut')
-				document.querySelector('#welcomeScreen').classList.add('animate__animated', 'animate__fadeIn')
+				document.querySelector('#welcomeScreen').classList.add('animate__animated', 'animate__fadeIn', 'animate__faster')
 
 				// Remasquer l'écran au bout de quelques secondes
 				setTimeout(() => {
@@ -124,7 +139,6 @@
 				};
 
 				// Actualiser l'heure et la date
-				var welcomeScreenStillHere = true;
 				setInterval(() => {
 					if(welcomeScreenStillHere) return;
 					editTime()
@@ -208,7 +222,7 @@
 	<div id="welcomeScreen" class="grid w-full h-full place-items-center fixed left-0 top-0 bg-no-repeat bg-center bg-cover">
 		<div class="absolute bg-black opacity-80 inset-0 z-0"></div>
 		<div class="relative text-center">
-			<h1 id="welcomeScreenTitle" class="text-5xl font-semibold">Bienvenue !</h1>
+			<h1 id="welcomeScreenTitle" class="text-5xl text-white font-semibold">Bienvenue !</h1>
 			<p id="welcomeScreenSubtitle" class="text-xl text-blue-400 mt-2">%REMOTE_LOCATION%</p>
 		</div>
 	</div>
