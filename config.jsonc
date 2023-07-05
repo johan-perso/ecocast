@@ -29,5 +29,8 @@
 	    - "uniqueCode" : Afficher sur l'écran un code unique, à entrer dans la télécommande
 	    - "password:<mot de passe>" : Utiliser un mot de passe pour se connecter
 	*/
-	"associationProtection": "uniqueCode"
+	"associationProtection": "uniqueCode",
+
+	// Chemin du navigateur Chromium personnalisé | défaut : none
+	"browserPath": "none"
 }
