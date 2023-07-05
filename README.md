@@ -31,15 +31,19 @@ Vous pourrez ensuite le lancer avec la commande `node index.js`.
 
 ### Applications disponible
 
-| Nom      | Description                                                        | Statut |
-|----------|--------------------------------------------------------------------|--------|
-| YouTube  | Permet d'accéder à YouTube en affichage TV                         | ✔️     |
-| RATP     | Affiche en temps réel les heures d'arrivés des bus, RER et métro.  | ✔️     |
-| Capture  | Effectue une capture d'écran d'EcoCast                             | ✔️     |
-| Spotify  | Permet d'écouter des musiques via Spotify                          | ❌     |
-| Disney+  | Lance une application Disney Plus                                  | ❌     |
-| Twitch   | Affiche le site de twitch.tv, optimisé pour TV                     | ❌     |
-| Molotov  | Vous laisse regarder les chaines de télévision                     | ❌     |
+| Nom            | Description                                                        | Statut |
+|----------------|--------------------------------------------------------------------|--------|
+| YouTube        | Permet d'accéder à YouTube en affichage TV                         | ✔️     |
+| Hyperbeam      | Rejoint une salle Hyperbeam contrôlé par un autre utilisateur      | ✔️     |
+| RATP           | Affiche en temps réel les heures d'arrivés des bus, RER et métro.  | 🟠     |
+| Capture        | Effectue une capture d'écran d'EcoCast                             | ✔️     |
+| Masquer écran  | Masque l'écran d'EcoCast en le remplaçant par l'écran de veille    | ✔️     |
+| Caster         | Partage un contenu sur l'écran depuis la télécommande virtuelle    | ✔️     |
+| Plex           | Lance Plex WEB, avec quelques ajouts pour une meilleure immersivité| ❌     |
+| Spotify        | Permet d'écouter des musiques via Spotify                          | ❌     |
+| Disney+        | Lance une application Disney+                                      | ❌     |
+| Twitch         | Affiche le site de twitch.tv, optimisé pour TV                     | ❌     |
+| Molotov        | Vous laisse regarder les chaines de télévision                     | ❌     |
 
 
 ### Comment ?
@@ -53,7 +57,28 @@ Les applications présentes dans EcoCast sont des sites web, légèrement modifi
 
 Pour contrôler votre EcoCast à distance, vous pouvez utiliser une télécommande virtuelle depuis votre téléphone. Vous n'avez qu'à vous rendre sur l'IP locale (192.168.1.xx) de l'ordinateur qui héberge l'EcoCast depuis un navigateur connecté au même réseau wifi.
 
-Cette télécommande virtuelle est le seul élément permettant de contrôler l'EcoCast et nécessite un code d'association à chaque connexion.
+Cette télécommande virtuelle est le seul élément permettant de contrôler l'EcoCast et nécessite un code d'association à chaque connexion (peut être modifié dans la configuration).
+
+
+### Caster
+
+La fonctionnalité "caster" permet de partager un contenu (image, vidéo, audio) sur l'écran d'EcoCast, depuis la télécommande virtuelle. Il peut s'agir d'un fichier sur votre téléphone (note : celui-ci devra s'envoyer entièrement avant d'être lu), d'un lien vers un fichier, ou d'un live sur Twitch.
+
+Sur les fichiers prévisualisés directement par EcoCast, les contrôles de la télécommande virtuelle fonctionneront :
+- Sur les images : seul le bouton de retour en arrière est disponible
+- Sur les vidéos et les audios :
+	- Vous pourrez aussi mettre en pause/lecture
+	- Avancer/reculer de 3 secondes avec les flèches de gauche à droite
+	- Avancer/reculer de 10 secondes avec les flèches du haut et du bas
+	- Augmenter/diminuer le volume
+	- Avancer à un certain pourcentage de la vidéo avec les chiffres de 0 à 9 (via le bouton "clavier" de la télécommande virtuelle)
+	- Appuyer sur le bouton central pour afficher la progression
+
+Les autres contenus peuvent ne pas être compatibles avec les contrôles de la télécommande virtuelle, à l'exception des boutons suivants :
+- Retour en arrière
+- Volume - / +
+- Volume muet
+- Accueil
 
 
 ### Configuration
@@ -124,6 +149,13 @@ Modifie le type de contenu affiché sur l'écran de veille
 
 Modifie le type de protection utilisé lors de l'association à la télécommande virtuelle.
 
+**browserPath**
+
+> Valeur par défaut : `none`\
+> Type : `string`
+
+Permet de démarrer EcoCast à partir d'un chemin de navigateur personnalisé. Si aucun chemin n'est défini, EcoCast essayera de trouver un navigateur Chromium installé sur votre appareil.
+
 
 ### Roadmap
 
@@ -136,6 +168,7 @@ Modifie le type de protection utilisé lors de l'association à la télécommand
 - [x] Diaporama d'image sur l'écran de veille
 - [x] Générer un code d'association unique pour chaque tentative de connexion
 - [x] Créer des captures d'écran de l'EcoCast, depuis la télécommande virtuelle
+- [x] Partager des contenus de la télécommande à l'écran
 
 
 ### Licence
