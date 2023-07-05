@@ -1,20 +1,28 @@
 {
 	"name": "ecocast",
-	"version": "0.4.0-beta",
-	"description": "Comme un Chromecast, mais en tant que logiciel.",
+	"version": "0.5.0-beta",
+	"description": "EcoCast vous permet de lancer des 'applications' TV sur un ordinateur.",
 	"main": "index.js",
 	"scripts": {
 		"dev": "nodemon index.js",
-		"start": "node index.js"
+		"start": "node index.js",
+		"build_tailwindcss": "npx tailwindcss -i ./public/pre_styles-tailwind.css -o ./public/style.css",
+		"watch_tailwindcss": "npx tailwindcss -i ./public/pre_styles-tailwind.css -o ./public/style.css --watch"
 	},
 	"author": "JohanStickman",
 	"license": "MIT",
 	"dependencies": {
+		"clipboardy": "2.3.0",
+		"daisyui": "^3.1.7",
 		"express": "^4.17.3",
+		"inquirer": "8.2.4",
 		"jsonc": "^2.0.0",
 		"loudness": "^0.4.1",
+		"multer": "1.4.5-lts.1",
+		"postcss": "^8.4.24",
 		"puppeteer": "^13.7.0",
-		"socket.io": "^4.4.1"
+		"socket.io": "^4.4.1",
+		"tailwindcss": "^3.3.2"
 	},
 	"nodemonConfig": {
 		"ignore": [
