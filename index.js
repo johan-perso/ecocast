@@ -1,96 +1,198 @@
 // Importer quelques librairies
-const puppeteer = require('puppeteer'); var browser;
-const fs = require('fs');
-const path = require('path');
+const puppeteer = require('puppeteer'); var browser
+const fs = require('fs')
+const os = require('os')
+const path = require('path')
 const loudness = require('loudness')
+const clipboardy = require('clipboardy')
 
 // Importer la configuration
 const config = require('jsonc').parse(fs.readFileSync(path.join(__dirname, 'config.jsonc')).toString())
 
 // Importer quelques autres librairies liés au serveur web
-const http = require('http');
+const http = require('http')
 const express = require("express")
 const app = express()
-const server = http.createServer(app);
-const { Server } = require("socket.io");
-const io = new Server(server);
+var multer = require('multer');
+const storage = multer.diskStorage({
+	destination: function (req, file, cb){
+		cb(null, 'public/temp')
+	},
+	filename: function (req, file, cb){
+		cb(null, Date.now() + file.originalname)
+	}
+});
+const upload = multer({ storage: storage });
+const server = http.createServer(app)
+const { Server } = require("socket.io")
+const io = new Server(server)
+
+// Créer un dossier temporaire s'il n'existe pas, s'il existe, le vider
+if(!fs.existsSync(path.join(__dirname, 'public', 'temp'))) fs.mkdirSync(path.join(__dirname, 'public', 'temp'))
+else fs.readdirSync(path.join(__dirname, 'public', 'temp')).forEach(file => fs.unlinkSync(path.join(__dirname, 'public', 'temp', file)))
 
 // Préparer un serveur web avec ExpressJS
-server.listen(process.env.PORT || config.port || 3510, () => {
-	if(config.port && process.env.PORT && process.env.PORT !== config.port) console.log(`[WARN] La configuration utilise le port ${config.port}, mais celui-ci a aussi été défini dans les variable d'enviroment avec le port ${process.env.PORT}.`)
-	if(!config.port && !process.env.PORT) console.log(`[WARN] La configuration n'a pas de port défini, le port ${server.address().port} a donc été utilisé.`)
-	console.log(`Serveur web démarré sur le port ${server.address().port}`);
-	console.log(`Chemin de la configuration : ${path.join(__dirname, 'config.jsonc')}`)
+var port = 3510
+server.on('error', (err) => {
+	if(err.code == 'EADDRINUSE' || err.code == 'EACCES') setTimeout(() => {
+		port += 500
+		tryToStartServer()
+	}, 1000)
 })
+function tryToStartServer(){
+	console.log(`Démarrage du serveur web sur le port ${port}...`)
+	server.listen(process.env.PORT || config.port || port || 3510, () => {
+		if(config.port && process.env.PORT && process.env.PORT !== config.port) console.log(`[WARN] La configuration utilise le port ${config.port}, mais celui-ci a aussi été défini dans les variable d'enviroment avec le port ${process.env.PORT}.`)
+		if(!config.port && !process.env.PORT) console.log(`[WARN] La configuration n'a pas de port défini, le port ${server.address().port} a donc été utilisé.`)
+		console.log(`Serveur web démarré sur le port ${server.address().port}`)
+		console.log(`Chemin de la configuration : ${path.join(__dirname, 'config.jsonc')}`)
+		clipboardy.writeSync(`http://${ipAddr}:${server.address().port}`)
+		main()
+	})
+}; tryToStartServer()
 
-// Générer un code unique à 6 chiffres pour la connexion à EcoCast depuis un autre appareil
-function generateCode(){
-	// Préparer un code
-	let code = [];
+// Fonction pour obtenir le chemin du navigateur à utiliser
+var browserPath
+async function getBrowserPath(){
+	// Si une variable d'enviroment est définie, l'utiliser
+	if(config?.browserPath?.length && config.browserPath != "none"){
+		browserPath = config.browserPath
+		return browserPath
+	}
 
-	// Ajouter des chiffres dans le code
-	for(let i = 0; i < 6; i++){
-		// Générer un chiffre
-		let number = Math.floor(Math.random() * 10);
+	// Préparer la liste des chemins de potentiel navigateur
+	let browserPaths = []
 
-		// Si le dernier chiffre du code est le même que le nouveau, en générer un autre
-		if(code.length > 0 && code[code.length - 1] == number){
-			i--;
-		} else {
-			// Sinon on l'ajoute au code
-			code.push(number);
+	// Ajouter des chemins de navigateur
+		// Sous Windows
+		if(os.platform() == 'win32'){
+			browserPaths.push(path.join(process.env.ProgramFiles, 'Google', 'Chrome', 'Application', 'chrome.exe'))
+			browserPaths.push(path.join(process.env['ProgramFiles(x86)'], 'Microsoft', 'Edge', 'Application', 'msedge.exe'))
+			browserPaths.push(path.join(process.env.ProgramFiles, 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe'))
+		}
+
+		// Sous Linux (pas testé)
+		if(os.platform() == 'linux'){
+			browserPaths.push('/usr/bin/google-chrome')
+			browserPaths.push('/usr/bin/chromium')
+		}
+
+		// Sous macOS (pas testé)
+		if(os.platform() == 'darwin'){
+			browserPaths.push('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
+			browserPaths.push('/Applications/Chromium.app/Contents/MacOS/Chromium')
+		}
+
+	// Tester si les chemins existent
+	browserPaths.forEach(browserPath => {
+		if(!fs.existsSync(browserPath)) browserPaths = browserPaths.filter(path => path != browserPath)
+	})
+	
+	// Si on a trouvé aucun navigateur, retourner null
+	if(browserPaths.length == 0) browserPath = null
+	
+	// Sinon, demander le navigateur à utiliser
+	else {
+		// Si on a trouvé qu'un seul navigateur, l'utiliser
+		if(browserPaths.length == 1) browserPath = browserPaths[0]
+		
+		// Sinon on utilise inquirer pour demander
+		else {
+			const inquirer = require('inquirer')
+			const { browser } = await inquirer.prompt({
+				type: 'list',
+				name: 'browser',
+				message: 'Quel navigateur voulez-vous utiliser ?',
+				choices: browserPaths
+			})
+			browserPath = browser
 		}
 	}
 
-	// Retourner le code
-	return code.join('');
-};
-var uniquesCodes = [];
+	// Retourner le chemin du navigateur
+	return browserPath
+}
+
+// Générer un code unique à 5 chiffres pour la connexion à EcoCast depuis un autre appareil
+const alphabet = [
+	{ char: '1', surrounding: ['2','4'] }, { char: '2', surrounding: ['1','3','5'] },
+	{ char: '3', surrounding: ['2','6'] }, { char: '4', surrounding: ['1','5','7'] }, { char: '5', surrounding: ['4','6'] },
+	{ char: '6', surrounding: ['3','5','9'] }, { char: '7', surrounding: ['4','8'] }, { char: '8', surrounding: ['7','9'] },
+	{ char: '9', surrounding: ['8','0','6'] }, { char: '0', surrounding: ['9','8'] }
+]
+function generateCode(){
+	// Générer tout les caractères
+	var code = ''
+	for(var i = 0; i < 5; i++){
+        if(!code) code += alphabet[Math.floor(Math.random() * alphabet.length)].char
+        else {
+            var lastChar = code[code.length - 1]
+            var lastCharIndex = alphabet.findIndex(char => char.char === lastChar)
+            var surrounding = alphabet[lastCharIndex].surrounding
+            var char = surrounding[Math.floor(Math.random() * surrounding.length)]
+            code += char
+        }
+	}
+
+	// On retourne le code
+	return code
+}
+var uniquesCodes = []
 
 // Fonction pour obtenir son IP local
 function getIPAdress(){
 	// Préparer un array d'IP locales
-	var listIps = [];
+	var listIps = []
 
 	// Obtenir toute les interfaces
-	var interfaces = require('os').networkInterfaces();
+	var interfaces = os.networkInterfaces()
 	for(var devName in interfaces){
-		var iface = interfaces[devName];
+		var iface = interfaces[devName]
 		for(var i = 0; i < iface.length; i++){
-			var alias = iface[i];
+			var alias = iface[i]
 			if(alias.family === 'IPv4'){
-				listIps.push(alias.address);
+				listIps.push(alias.address)
 			}
 		}
 	}
 
 	// Enlever les IPs qui ne commencent pas par 192.168.1.
-	listIps = listIps.filter(ip => ip.startsWith("192.168.1."));
+	listIps = listIps.filter(ip => ip.startsWith("192.168.1."))
 
 	// Retourner l'IP locale
 	return listIps[0] || '127.0.0.1'
-}; ipAddr = getIPAdress();
+}; ipAddr = getIPAdress()
 
 // Routes pour le serveur web
 app.get('/sleep', async (req, res) => {
-	res.send(fs.readFileSync(path.join(__dirname, 'public', 'sleep.html')).toString().replace(/%REMOTE_LOCATION%/g, `http://${ipAddr}:${server.address().port}`));
+	res.send(fs.readFileSync(path.join(__dirname, 'public', 'sleep.html')).toString().replace(/%REMOTE_LOCATION%/g, `http://${ipAddr}:${server.address().port}`))
+})
+app.get('/filepreview', async (req, res) => {
+	res.send(fs.readFileSync(path.join(__dirname, 'public', 'filepreview.html')).toString())
 })
 app.get('/', async (req, res) => {
-	res.send(fs.readFileSync(path.join(__dirname, 'public', 'remote.html')).toString());
+	res.send(fs.readFileSync(path.join(__dirname, 'public', 'remote.html')).toString())
 })
 app.get('/wallpaperList', async (req, res) => {
-	if(config.screensaverType == 'diaporama') res.send(fs.readFileSync(path.join(__dirname, 'public', 'wallpaperList.txt')).toString());
-	if(config.screensaverType.startsWith('video:')) res.send(`video: ${config.screensaverType.replace('video:','')}`);
+	if(config.screensaverType == 'diaporama') res.send(fs.readFileSync(path.join(__dirname, 'public', 'wallpaperList.txt')).toString())
+	if(config.screensaverType.startsWith('video:')) res.send(`video: ${config.screensaverType.replace('video:','')}`)
 })
 app.get('/opad.png', async (req, res) => {
-	res.sendFile(path.join(__dirname, 'public', 'opad.png'));
+	res.sendFile(path.join(__dirname, 'public', 'opad.png'))
 })
-app.use('/appsIcon', express.static(path.join(__dirname, 'public', 'appsIcon')));
-app.use('/app/ratp', express.static(path.join(__dirname, 'public', 'ratp-app')));
-app.use('/videos', express.static(path.join(__dirname, 'public', 'videos'))); // Inutilisé, mais j'garde au cas où quelqu'un veut l'utiliser pour servir des vidéos (config.screensaverType)
+app.get('/style.css', async (req, res) => {
+	res.sendFile(path.join(__dirname, 'public', 'style.css'))
+})
+app.use('/appsIcon', express.static(path.join(__dirname, 'public', 'appsIcon')))
+app.use('/app/ratp', express.static(path.join(__dirname, 'public', 'ratp-app')))
+app.use('/videos', express.static(path.join(__dirname, 'public', 'videos'))) // Inutilisé, mais j'garde au cas où quelqu'un veut l'utiliser pour servir des vidéos (config.screensaverType)
+app.use('/public/temp', express.static(path.join(__dirname, 'public', 'temp')))
 
 // Fonction principale
 async function main(){
+	// Définir le chemin du navigateur à utiliser
+	await getBrowserPath()
+
 	// Si Chromium avait crash lors de la dernière utilisation, modifier cela
 	if(fs.existsSync(path.join(__dirname, 'chromeUserData'))){
 		// Lire les préférences et le Local State
@@ -102,17 +204,17 @@ async function main(){
 		} catch (error) {}
 
 		// Modifier certains élements du fichier
-		if(preferences && preferences?.length) preferences = preferences.toString().replace(/"exit_type":"Crashed"/g, '"exit_type":"Normal"');
+		if(preferences && preferences?.length) preferences = preferences.toString().replace(/"exit_type":"Crashed"/g, '"exit_type":"Normal"')
 		if(localState && localState?.length) localState = localState.toString().replace(/"exited_cleanly":false/g, '"exited_cleanly":true')
 
 		// Ecrire les préférences
-		if(preferences && preferences?.length) fs.writeFileSync(path.join(__dirname, 'chromeUserData', 'Default', 'Preferences'), preferences);
-		if(localState && localState?.length) fs.writeFileSync(path.join(__dirname, 'chromeUserData', 'Default', 'Local State'), localState);
+		if(preferences && preferences?.length) fs.writeFileSync(path.join(__dirname, 'chromeUserData', 'Default', 'Preferences'), preferences)
+		if(localState && localState?.length) fs.writeFileSync(path.join(__dirname, 'chromeUserData', 'Default', 'Local State'), localState)
 	}
 
 	// Préparer la liste des extensions à charger
 		// Préparer un array vide
-		var extensions = [];
+		var extensions = []
 
 		// Ajouter uBlock s'il n'est pas désactivé
 		if(config.adBlock) extensions.push(path.join(__dirname, 'chromeExtensions','uBlockOrigin'))
@@ -120,7 +222,7 @@ async function main(){
 		// Ajouter hideCursor s'il n'est pas désactivé
 		if(config.hideCursor) extensions.push(path.join(__dirname, 'chromeExtensions','hideCursor'))
 
-		// Rajoute d'autres extension peut importe la configuration
+		// Rajoute une extension peut importe la configuration
 		extensions.push(path.join(__dirname, 'chromeExtensions','globalCode'))
 
 	// Crée le navigateur
@@ -128,6 +230,7 @@ async function main(){
 		headless: false,
 		ignoreDefaultArgs: ["--enable-automation","--disable-extensions"],
 		defaultViewport: null,
+		executablePath: browserPath,
 		userDataDir: './chromeUserData',
 		args: [
 			"--autoplay-policy=no-user-gesture-required",
@@ -141,20 +244,23 @@ async function main(){
 			"--disable-infobars",
 			"--disable-translate",
 			"--disable-background-mode",
+			"--disable-web-security",
+			"--disable-features=IsolateOrigins",
+			"--disable-site-isolation-trials",
 			`--load-extension=${extensions.join(',')}`,
 			config.fullScreen == true ? "--start-fullscreen" : '',
 		]
-	});
+	})
 
 	// Quand le processus NodeJS est sur le point de s'arrêter, fermer le navigateur
 	process.on('exit', async () => {
-		await browser.close();
-	});
+		await browser.close()
+	})
 
 	// Quand le navigateur se ferme, arrêter le processus
 	browser.on('disconnected', () => {
-		process.exit(0);
-	});
+		process.exit(0)
+	})
 
 	// Ouvrir une page
 	var page = await browser.newPage();
@@ -174,22 +280,23 @@ async function main(){
 		if(config.associationProtection != 'uniqueCode') return res.set('Content-Type', 'application/json').send({ error: true, protectionType: (config?.associationProtection?.startsWith('password:') ? 'password' : config.associationProtection), message: "Endpoint désactivé : le type de protection n'est pas par code unique" })
 
 		// s'il y a plus de 15 codes dans la liste, supprimer les 5 plus anciens
-		if(uniquesCodes.length > 15) uniquesCodes.splice(0, 5);
+		if(uniquesCodes.length > 15) uniquesCodes.splice(0, 5)
 
-		// Générer un code unique
-		var code = generateCode();
-		uniquesCodes.push(code);
+		// Générer un code unique (et le copier dans le presse-papier)
+		var code = generateCode()
+		uniquesCodes.push(code)
+		clipboardy.writeSync(code)
 
 		// Afficher le code unique sur l'écran
 		Array.from(await browser.pages()).forEach(page_ => {
 			page_.evaluate((code) => {
-				document.body.insertAdjacentHTML('beforebegin', `<div id="toast_showUniqueCode" style="z-index: 1000; position: absolute; top: 0.5rem; left: 0.5rem; display: flex; align-items: center; width: 100%; max-width: 20rem; padding: 1rem; border-radius: 0.5rem; --tw-shadow:0 1px 3px 0 rgba(0,0,0,0.1),0 1px 2px 0 rgba(0,0,0,0.06); --tw-text-opacity: 1;color: rgba(156, 163, 175, var(--tw-text-opacity)); --tw-bg-opacity: 1;background-color: rgba(31, 41, 55, var(--tw-bg-opacity));" class="animate__animated animate__fadeInLeft"><div style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 2rem; height: 2rem; border-radius: 0.75rem; --tw-bg-opacity: 1;background-color: #0197F6; --tw-text-opacity: 1;color: #fff;"><svg style="width: 1.25rem; height: 1.25rem;" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg></div><div style="margin-left: 0.75rem; font-size: 0.875rem; line-height: 1.25rem;font-weight: 400;">Code d'association : <b>${code}</b></div></div>`)
+				document.body.insertAdjacentHTML('beforebegin', `<div id="toast_showUniqueCode" style="z-index: 1000; position: absolute; top: 0.5rem; left: 0.5rem; display: flex; align-items: center; width: 100%; max-width: 20rem; padding: 1rem; border-radius: 0.5rem; --tw-shadow:0 1px 3px 0 rgba(0,0,0,0.1),0 1px 2px 0 rgba(0,0,0,0.06); --tw-text-opacity: 1;color: rgba(156, 163, 175, var(--tw-text-opacity)); --tw-bg-opacity: 1;background-color: rgba(31, 41, 55, var(--tw-bg-opacity));" class="animate__animated animate__fadeInLeft"><div style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 2rem; height: 2rem; border-radius: 0.75rem; --tw-bg-opacity: 1;background-color: #0197F6; --tw-text-opacity: 1;color: #fff;"><svg style="width: 1.25rem; height: 1.25rem;" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg></div><div style="margin-left: 0.75rem; font-size: 0.875rem; line-height: 1.25rem;font-weight: 400;">Code d'association : <b>${code.match(/.{1,2}/g).join(' ')}</b></div></div>`)
 				setTimeout(() => {
-					document.getElementById('toast_showUniqueCode').classList.remove('animate__animated', 'animate__fadeInLeft');
-					document.getElementById('toast_showUniqueCode').classList.add('animate__animated', 'animate__fadeOutLeft');
+					document.getElementById('toast_showUniqueCode').classList.remove('animate__animated', 'animate__fadeInLeft')
+					document.getElementById('toast_showUniqueCode').classList.add('animate__animated', 'animate__fadeOutLeft')
 				}, 24000)
 				setTimeout(() => {
-					document.getElementById('toast_showUniqueCode').remove();
+					document.getElementById('toast_showUniqueCode').remove()
 				}, 24700)
 			}, code)
 		})
@@ -220,6 +327,35 @@ async function main(){
 
 		// Retourner la capture d'écran
 		res.set('Content-Type', 'text/plain').send(`data:image/png;base64,${screenshot}`)
+	})
+
+	// Route pour l'API - afficher un fichier sur l'écran
+	app.post('/api/castFile', async (req, res) => {
+		// Vérifier qu'un code a été donné
+		if(config.associationProtection != 'none' && !req?.query?.code) return res.set('Content-Type', 'application/json').send({ error: true, message: "Aucun code donné" })
+		var code = req?.query?.code
+
+		// Si le code ne fais pas parti de la liste des codes uniques
+		if(config.associationProtection == 'uniqueCode' && !uniquesCodes.includes(code)){
+			return res.set('Content-Type', 'application/json').send({ error: true, message: "Code incorrect" })
+		}
+
+		// Si la protection est un mot de passe, le vérifier
+		if(config.associationProtection.startsWith('password:')){
+			var password = config.associationProtection.split(':')[1];
+			if(password != code) return res.set('Content-Type', 'application/json').send({ error: true, message: "Mot de passe incorrect" })
+		}
+
+		// Récupérer le fichier via le body form data
+		upload.single('file')(req, res, async (err) => {
+			// On renvoie via l'API que le fichier a été reçu, et on log si on a une erreur
+			if(err) console.log(err)
+			res.set('Content-Type', 'application/json').send({ error: false })
+
+			// On va sur la page de prévisualisation du fichier, et on clique pour lancer la lecture si c'est une vidéo ou un audio
+			await page.goto(`http://${ipAddr}:${server.address().port}/filepreview?path=${encodeURIComponent('public/temp/' + req.file.filename)}&type=${encodeURIComponent(req.file.mimetype.split('/')[0])}`, { timeout: 0 })
+			if(req.file.mimetype.startsWith('video') || req.file.mimetype.startsWith('audio') || req.file.filename.endsWith('.mov')) await page.click('body')
+		})
 	})
 
 	// Route pour l'API - supprimer un code
@@ -299,6 +435,7 @@ async function main(){
 			if(action == "middle") await page.keyboard.press('Enter')
 
 			// Bouton du haut
+			console.log(page.url)
 			if(action == "up") await page.keyboard.press('ArrowUp')
 
 			// Bouton du bas
@@ -528,9 +665,19 @@ async function main(){
 			if(action == "pause"){
 				// Inverser le statut de pause
 				await page.evaluate(() => {
+					// Tenter pour une vidéo
 					var video = document.querySelector('video')
-					if (video.paused) video.play();
-					else video.pause()
+					if(video){
+						if(video.paused) video.play();
+						else video.pause()
+					}
+
+					// Tenter pour un audio
+					var audio = document.querySelector('audio')
+					if(audio){
+						if(audio.paused) audio.play();
+						else audio.pause()
+					}
 				})
 			}
 
@@ -553,15 +700,175 @@ async function main(){
 			}
 		})
 
+		// Si on veut masquer l'application en cours
+		var isHidden = false
+		socket.on('hideScreen', async () => {
+			// Si l'application n'est pas déjà masquée
+			if(!isHidden){
+				var page = await browser.newPage()
+				await page.goto(`http://${ipAddr}:${server.address().port}/sleep?skipAnimation=true`, { timeout: 0 }) // On ouvre une nouvelle page sur l'écran de veille
+				isHidden = true
+			}
+
+			// Sinon, on la démasque
+			else {
+				Array.from(await browser.pages()).forEach((page, i) => { // On ferme toutes les pages sauf la première
+					if(i != 0) page.close()
+				})
+				isHidden = false
+			}
+		})
+
+		// Se préparer à caster un contenu
+		socket.on('cast', () => {
+			socket.emit('askModal',
+					"Caster un contenu",
+					"Vous vous apprêtez à partager un contenu sur votre écran",
+					[{
+						type: "select",
+						placeholder: "Type de contenu",
+						required: true,
+						id: 'type',
+						choices: [
+							{
+								name: "Fichier de votre appareil",
+								id: "localfile"
+							},
+							{
+								name: "Fichier via Internet",
+								id: "internetfile"
+							},
+							{
+								name: "Live Twitch",
+								id: "twitch"
+							}
+						]
+					}],
+					response => {
+						if(response.type == 'localfile'){
+							socket.emit('askModal', "Caster un fichier local", "Choisissez un fichier depuis votre appareil à caster sur votre écran", [{ type: "file", placeholder: "Image, vidéo, audio", required: true, id: 'file', accept: "image/png,image/jpeg,image/gif,video/mp4,video/quicktime,video/webm,audio/mpeg,audio/ogg,audio/wav" }])
+							// cette fois-ci on attend pas de callback, car le client nous l'envoie différemment
+						}
+
+						if(response.type == 'internetfile'){
+							socket.emit('askModal', "Caster un fichier Internet", "Entrer l'URL d'accès directe vers le fichier à caster sur votre écran",
+								[{ type: "url", placeholder: "Adresse internet", required: true, id: 'url' }],
+								response => cast_internetfile(response.url)
+							)
+						}
+
+						if(response.type == 'twitch'){
+							socket.emit('askModal', "Caster un live Twitch", "Entrer l'URL d'un live ou un nom d'utilisateur Twitch à caster sur votre écran",
+								[{ type: "url", placeholder: "URL ou pseudo Twitch", required: true, id: 'url' }],
+								response => cast_twitch(response.url)
+							)
+						}
+					}
+				)
+		})
+
+		// Caster un contenu via Internet
+		async function cast_internetfile(url){
+			await page.goto(`http://${ipAddr}:${server.address().port}/filepreview?path=${encodeURIComponent(url)}`, { timeout: 0 })
+			await page.click('body') // lance la lecture si c'est une vidéo ou un audio
+		}
+
+		// Caster un contenu via Twitch
+		async function cast_twitch(url){
+			await page.goto(url.startsWith('https://m.twitch.tv') || url.startsWith('https://twitch.tv') || url.startsWith('https://www.twitch.tv') ? url : `https://m.twitch.tv/${url}`, { timeout: 0, waitUntil: 'networkidle0' })
+			try {
+				await page.evaluate(() => {
+					document.querySelector("nav").remove() // Supprimer la navbar
+					document.querySelector("#__next > div > div").remove() // Supprimer la navbar
+					document.querySelector("#__next > div > main > div > div.Layout-sc-1xcs6mc-0.sc-92c0556c-3.gyuRLA.nOrUL").remove() // Supprimer le chat
+					document.querySelector("body > div.ScReactModalBase-sc-26ijes-0.SrsEl.tw-modal-layer > div > div > div:nth-child(2) > div > div > div.Layout-sc-1xcs6mc-0.ghhWpt > button").click() // Accepter les cookies
+				})
+			} catch(err){}
+
+			// Si on a pas de vidéo, on conclus que la personne n'est pas en live
+			try {
+				if(!await page.$('video')){
+					socket.emit('error', "Le live n'existe pas ou n'est pas en cours.")
+					await page.goBack()
+				}
+			} catch(err){}
+		}
+
 		// Quand le socket veut ouvrir une application
 		socket.on('startApp', async (app) => {
 			console.log(app)
 
 			// Si l'application est YouTube
-			if(app == "youtube") await page.goto('https://youtube.com/tv', { timeout: 0 })
+			if(app == "youtube") try { await page.goto('https://youtube.com/tv', { timeout: 0 }) } catch(err){}
 
 			// Si l'application est RATP
-			if(app == "ratp") await page.goto(`http://${ipAddr}:${server.address().port}/app/ratp/chooseLine.html`, { timeout: 0 })
+			if(app == "ratp") socket.emit('error', `RATP n'est pas encore supporté, mais vous pourriez finir son développement vous-même 🙃 https://github.com/johan-perso/ecocast`)
+			// if(app == "ratp") await page.goto(`http://${ipAddr}:${server.address().port}/app/ratp/chooseLine.html`, { timeout: 0 })
+
+			// Si l'application est Hyperbeam
+			if(app == "hyperbeam"){
+				socket.emit('askModal',
+					"Session Hyperbeam",
+					"Entrer le code d'une session Hyperbeam déjà existante pour la rejoindre",
+					[
+						{
+							type: "url",
+							placeholder: "Code/URL de la session",
+							required: true,
+							id: 'code'
+						},
+						{
+							type: "text",
+							placeholder: "Nom d'utilisateur",
+							required: false,
+							id: 'username'
+						}
+					],
+					async (response) => {
+						// Si on a pas de code, on arrête
+						if(!response.code) return
+
+						// Aller sur la page et attendre qu'elle charge
+						await page.goto(response.code.startsWith('https://hyperbeam.com/') ? response.code : `https://hyperbeam.com/app/invite/${response.code}`, { timeout: 0, waitUntil: 'networkidle0' })
+
+						// Cocher la validation d'âge
+						try {
+							await page.click('div.inviteCards_nX2Ux div.internetAdultContainer_3CtfY > div > div')
+						} catch(err){}
+
+						// Ecrire le nom d'utilisateur puis rejoindre
+						try {
+							if(response.username){
+								await page.$eval('div.displayNameInput_1PDBo input', el => el.value = '')
+								await page.type('div.displayNameInput_1PDBo input', response.username)
+							}
+							await page.click('div.inviteCards_nX2Ux div.footer_3Yiou > button')
+						} catch(err){}
+
+						// Attendre qu'on soit sur la page de la session
+						try {
+							await page.waitForSelector('.vmContainer_utWdv > video')
+						} catch(err){}
+
+						// Si on nous affiche le guide, le fermer
+						try {
+							await page.evaluate(() => {
+								document.querySelector("#app > div.wrapper_1fzOe.roomInfoCard_2fgp2 div.dialog-footer > button").click()
+							})
+						} catch(err){}
+
+						// Passer en "plein écran"
+						try {
+							await page.evaluate(() => {
+								document.querySelector("div.chatContainer_1z3kq").remove() // chat
+								document.querySelector("div.vmControls_1Z7US > div.rightControls_47NFz button:nth-child(3)").click() // passer en mode théâtre
+								document.querySelector("div.vmControls_1Z7US").remove() // supprimer les contrôles (volume, plein écran, théâtre, réglages, ...)
+								document.querySelector("div.resizer_sfC_W").remove() // truc à glisser pour redimensionner le chat
+							})
+						} catch(err){}
+					}
+				)
+			}
 
 			// Si l'application est Spotify
 			if(app == "spotify") socket.emit('error', `Spotify n'est pas encore supporté, mais vous pourriez le développer vous-même 🙃 https://github.com/johan-perso/ecocast`)
@@ -575,5 +882,5 @@ async function main(){
 			// Si l'application est Molotov
 			if(app == "molotov") socket.emit('error', `Molotov n'est pas encore supporté, mais vous pourriez le développer vous-même 🙃 https://github.com/johan-perso/ecocast`)
 		})
-	});
-}; main()
+	})
+}
