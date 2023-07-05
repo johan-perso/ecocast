@@ -5,15 +5,57 @@
 	<title>Télécommande EcoCast</title>
 	<meta charset="UTF-8"/>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link href="https://firebasestorage.googleapis.com/v0/b/storage-bf183.appspot.com/o/otherContent%2Fstyle.css?alt=media" rel="stylesheet">
+	<link href="style.css" rel="stylesheet">
 	<link href="https://cdn.jsdelivr.net/gh/hung1001/font-awesome-pro@4cac1a6/css/all.css" rel="stylesheet" type="text/css"/>
 	<link rel="stylesheet" href="https://rsms.me/inter/inter.css">
 	<script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
 
 	<!-- Un peu de JS -->
 	<script>
-		// Demander sur l'écran un code d'association
-		fetch('/api/promptCode', { method: 'POST' })
+		(async () => {
+			// Demander sur l'écran un code d'association
+			var tryPromptCode = await fetch('/api/promptCode', { method: 'POST' }).then(res => res.json())
+
+			// Si le type de protection est "none"
+			if(tryPromptCode.protectionType == 'none') {
+				// On supprime la demande de code d'association
+				document.getElementById('askAssociationCodeContainer').remove()
+				document.getElementById('associationCodeBackgroundOpacity').remove()
+
+				// On se connecte
+				connectToSocket()
+			}
+
+			// Si le type de protection est "password"
+			if(tryPromptCode.protectionType == 'password') {
+				// Modifier le sous-titre
+				document.getElementById('askAssociationSubtitle').innerText = 'Pour vous connecter, entrer votre mot de passe.'
+
+				// Modifier l'input
+				document.getElementById('associationCode').setAttribute('type', 'password')
+				document.getElementById('associationCode').setAttribute('placeholder', 'Mot de passe, présent dans la configuration')
+			}
+		})();
+
+		// Détecter quand on clique longtemps quelque part
+		var mouseIsDown = false;
+		var idInterval;
+		var opad;
+		document.addEventListener('mousedown', event => {
+			if(!opad) opad = document.getElementById('opad')
+			if(event.target == opad) event.preventDefault()
+			mouseIsDown = true;
+			idInterval = setInterval(() => {
+				if(mouseIsDown){
+					var target = event?.target || event?.srcElement || event?.toElement || event?.path?.[0] || null
+					opadClick(event.clientX || event.clientLeft, event.clientY || event.clientTop, target.offsetLeft, target.offsetTop)
+				}
+			}, 400);
+		});
+		window.addEventListener('mouseup', () => {
+			clearInterval(idInterval);
+			mouseIsDown = false;
+		});
 
 		// Préparer la variable contenant le socket et le code unique
 		var socket;
@@ -49,32 +91,125 @@
 				}, 2000)
 			})
 
+			// Gérer les demandes via modal
+			socket.on('askModal', function(title, description, inputs, callback){
+				// Gérer les inputs
+				inputs = inputs.map(inp => {
+					if(inp.type == 'select'){
+						var input = document.createElement('select')
+						input.classList = 'mt-2 select w-full'
+						if(inp.required) input.setAttribute('is-required', 'true')
+						input.setAttribute('input-id', inp.id)
+						inp.choices.forEach((choice, i) => {
+							var option = document.createElement('option')
+							if(i == 0) option.setAttribute('selected', 'true')
+							option.innerText = choice.name
+							option.setAttribute('option-id', choice.id)
+							input.appendChild(option)
+						})
+						return `<p class="mt-2 text-left label-text">${(inp.required ? '* ' : '') + inp.placeholder} :</p>\n${input.outerHTML}`
+					} else {
+						var input = document.createElement('input')
+						input.classList = `mt-2 ${inp.type == 'file' ? 'file-' : ''}input w-full` // "file-input" (pour que tailwindcss build cette classe)
+						if(inp.type) input.setAttribute('type', inp.type)
+						if(inp.value) input.setAttribute('value', inp.value)
+						if(inp.accept) input.setAttribute('accept', inp.accept)
+						if(inp.required) input.setAttribute('is-required', 'true')
+						input.setAttribute('input-id', inp.id)
+						return `<p class="mt-2 text-left label-text">${(inp.required ? '* ' : '') + inp.placeholder} :</p>\n${input.outerHTML}`
+					}
+				})
+
+				// Modifier les élements principaux
+				document.getElementById('askModal_title').innerText = title
+				document.getElementById('askModal_description').innerText = description
+				document.getElementById('askModal_inputs').innerHTML = inputs.join('')
+
+				// Ajouter un bouton "valider"
+				var confirmButton = document.createElement('button')
+				confirmButton.classList = 'mt-4 bg-gray-600 hover:bg-gray-700 transition ease-in text-white px-4 py-2 rounded-lg'
+				confirmButton.style.minWidth = '80%'
+				confirmButton.innerText = 'Valider'
+				confirmButton.onclick = async () => {
+					// Obtenir les inputs
+					var inputs = Array.from(document.querySelectorAll('#askModal_inputs select, #askModal_inputs input'))
+
+					// Vérifier que tout les inputs soient remplis
+					var allInputsFilled = true
+					inputs.forEach(inp => {
+						if(inp.getAttribute('is-required') && !inp.value) allInputsFilled = false
+					})
+
+					// Si tout les inputs soient remplis, on les envoie
+					if(allInputsFilled){
+						// Obtenir et envoyer les valeurs
+						var values = {}
+						inputs.forEach(inp => {
+							if(inp.tagName == 'SELECT') values[inp.getAttribute('input-id')] = inp.options[inp.selectedIndex].getAttribute('option-id')
+							else values[inp.getAttribute('input-id')] = inp.value
+							inp.setAttribute('disabled', 'true')
+						})
+
+						// Envoyer les valeurs
+						if(inputs[0].getAttribute('type') == 'file'){
+							// Envoyer le fichier à l'API
+							await new Promise((resolve, reject) => {
+								var formData = new FormData()
+								formData.append('file', inputs[0].files[0])
+								fetch(`/api/castFile?code=${uniqueCode}`, { method: 'POST', body: formData }).then(res => res.json()).then(res => {
+									resolve()
+									if(res.error) alert(res.error)
+								})
+							})
+						} else callback(values)
+
+						// Masquer le modal puis supprimer ce bouton
+						document.getElementById('askModal_backgroundOpacity').classList.add('hidden')
+						document.getElementById('askModal_container').classList.add('hidden')
+						confirmButton.remove()
+					}
+
+					// Sinon, on affiche un message d'erreur
+					else alert('Vous devez remplir tout les champs obligatoires.')
+				}
+				document.getElementById('askModal_container').appendChild(confirmButton)
+
+				// Afficher le modal
+				document.getElementById('askModal_backgroundOpacity').classList.remove('hidden')
+				document.getElementById('askModal_container').classList.remove('hidden')
+			})
+
 			// Masquer la demande de code
-			document.getElementById('askAssociationCodeContainer').classList.add('animate__animated', 'animate__fadeOut')
-			document.getElementById('associationCodeBackgroundOpacity').classList.add('animate__animated', 'animate__fadeOut')
+			if(document.getElementById('askAssociationCodeContainer')) document.getElementById('askAssociationCodeContainer').classList.add('animate__animated', 'animate__fadeOut')
+			if(document.getElementById('associationCodeBackgroundOpacity')) document.getElementById('associationCodeBackgroundOpacity').classList.add('animate__animated', 'animate__fadeOut')
 			setTimeout(() => {
-				document.getElementById('askAssociationCodeContainer').remove()
-				document.getElementById('associationCodeBackgroundOpacity').remove()
+				document.getElementById('askAssociationCodeContainer')?.remove()
+				document.getElementById('associationCodeBackgroundOpacity')?.remove()
 			}, 500)
+		}
+
+		// Fonction pour gérer les clics sur l'opad
+		function opadClick(clientX, clientY, offsetLeft, offsetTop){
+			// De quel côté de l'image on a cliqué
+			var x = clientX - offsetLeft
+			var y = clientY - offsetTop
+
+			// Déterminer de quel côté on a cliqué
+			var side = 'middle'
+			if(x < 53 && x > 0) side = 'left'
+			if(x > 198 && x < 256) side = 'right'
+			if(y < 65 && y > 0) side = 'up'
+			if(y > 206 && y < 256) side = 'down'
+
+			// Envoyer la commande
+			socket.emit('opad', side)
 		}
 
 		// Quand la page est chargée
 		window.onload = async function(){
 			// Quand on clique sur l'opad
 			document.getElementById('opad').onclick = function(){
-				// De quel côté de l'image on a cliqué
-				var x = event.clientX - this.offsetLeft
-				var y = event.clientY - this.offsetTop
-
-				// Déterminer de quel côté on a cliqué
-				var side = 'middle'
-				if(x < 53 && x > 0) side = 'left'
-				if(x > 198 && x < 256) side = 'right'
-				if(y < 65 && y > 0) side = 'up'
-				if(y > 206 && y < 256) side = 'down'
-
-				// Envoyer la commande
-				socket.emit('opad', side)
+				opadClick(event.clientX, event.clientY, this.offsetLeft, this.offsetTop)
 			}
 
 			// Quand on clique sur un bouton de contrôle
@@ -183,6 +318,22 @@
 			document.body.innerHTML += `<div id="screenshotBackgroundOpacity" class="absolute bg-black opacity-40 inset-0 z-0"></div><div id="showScreenshot" class="fixed bg-gray-800 rounded-xl px-2 py-2 text-center" style="max-width: 94%"><svg onclick="closeScreenshot()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="float-right hover:text-gray-400"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg><img src="${screenshot}" class="px-1 mt-8 mb-2 rounded-lg mx-auto" width="1280" height="720"></div>`
 		}
 
+		// Fonction pour (dé)masquer l'écran
+		function hideScreen(){
+			if(!localStorage.getItem('firstUseTip_hideScreen')){
+				alert(`Première utilisation ?\nL'application "Masquer écran" permet de masquer le contenu de l'application en cours d'utilisation. Lorsque vous l'utilisez, l'écran de veille sera affichée et tout les contrôles seront masqués jusqu'à ce que vous appuyez sur le bouton à nouveau.`)
+				localStorage.setItem('firstUseTip_hideScreen', 'true')
+			}
+			socket.emit('hideScreen')
+		}
+
+		// Fonction pour caster un contenu
+		function castContent(){
+			showRemote()
+			socket.emit('cast')
+			// TODO: finir ça
+		}
+
 		// Si on clique ailleurs que dans le modal de la capture, la fermer
 		document.addEventListener('click', (event) => {
 			// Vérifier que la capture d'écran est affichée
@@ -281,8 +432,8 @@
 <body class="grid place-items-center">
 	<!-- Boutons du haut -->
 	<div id="upperButtons">
-		<button id="upperButton_right" onclick="showLauncher()" class="absolute left-4 top-4 rounded-full center" style="box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25), inset 0px 2px 1px rgba(255, 255, 255, 0.06); background-color: #1C1C1D; width: 48px; height: 48px;"><i style="font-size: 1.2rem;" class="center fas fa-bars" style="color: #fff;"></i></button>
-		<button id="upperButton_left" onclick="powerOff()" class="absolute right-4 top-4 rounded-full center" style="box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25), inset 0px 2px 1px rgba(255, 255, 255, 0.06); background-color: #1C1C1D; width: 48px; height: 48px;"><i style="font-size: 1.2rem;" class="center fas fa-power-off" style="color: #fff;"></i></button>
+		<button id="upperButton_right" onclick="showLauncher()" class="absolute left-4 top-4 rounded-full center text-white" style="box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25), inset 0px 2px 1px rgba(255, 255, 255, 0.06); background-color: #1C1C1D; width: 48px; height: 48px;"><i style="font-size: 1.2rem;" class="center fas fa-bars" style="color: #fff;"></i></button>
+		<button id="upperButton_left" onclick="powerOff()" class="absolute right-4 top-4 rounded-full center text-white" style="box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25), inset 0px 2px 1px rgba(255, 255, 255, 0.06); background-color: #1C1C1D; width: 48px; height: 48px;"><i style="font-size: 1.2rem;" class="center fas fa-power-off" style="color: #fff;"></i></button>
 	</div>
 
 	<!-- Opad -->
@@ -292,10 +443,18 @@
 
 	<!-- Demander un code de connexion -->
 	<div id="associationCodeBackgroundOpacity" class="absolute bg-black opacity-40 inset-0 z-0"></div>
-	<div id="askAssociationCodeContainer" class="fixed bg-gray-800 rounded-xl py-12 px-1 grid place-items-center text-center" style="width: 94%">
+	<div id="askAssociationCodeContainer" class="fixed bg-gray-800 text-white rounded-xl py-12 px-1 grid place-items-center text-center" style="width: 94%; z-index: 2">
 		<h1 class="text-3xl font-semibold">Se connecter</h1>
-		<p class="mt-1 px-2 text-md md:text-lg">Pour vous connecter, entrer le code qui s'affiche sur votre écran</p>
+		<p id="askAssociationSubtitle" class="mt-1 px-2 text-md md:text-lg">Pour vous connecter, entrer le code qui s'affiche sur votre écran</p>
 		<input onkeypress="if(event.keyCode == 13){ this.focus(); event.preventDefault(); connectToSocket(this.value) }" class="mt-4 input w-full text-center" style="max-width: 50%;" id="associationCode" type="number" placeholder="Code à 6 chiffres">
+	</div>
+
+	<!-- Demande via modal -->
+	<div id="askModal_backgroundOpacity" class="hidden absolute bg-black opacity-40 inset-0 z-0"></div>
+	<div id="askModal_container" class="hidden fixed bg-gray-800 text-white rounded-xl py-12 px-1 grid place-items-center text-center" style="width: 94%; z-index: 2">
+		<h1 id="askModal_title" class="text-3xl font-semibold">TITLE</h1>
+		<p id="askModal_description" class="mt-1 px-2 text-md md:text-lg">DESCRIPTION</p>
+		<div id="askModal_inputs" class="mt-2" style="min-width: 50%"></div>
 	</div>
 
 	<!-- Barre de volume sur le côté gauche -->
@@ -310,47 +469,50 @@
 	<div id="launcherContainer" class="p-4 w-full absolute top-20 hidden">
 		<!-- Launcher d'applications -->
 		<div>
-			<div style="background-color: #232323; box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);" class="rounded-xl w-full py-6 px-4 space-y-4 center">
-				<!-- Première rangée -->
-				<div class="flex space-x-4">
-					<div class="center">
+			<div style="background-color: #232323; box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);" class="rounded-xl w-full py-8 px-2 space-y-4 center">
+				<div class="grid grid-rows-3 grid-cols-3 md:grid-cols-5 gap-x-2 gap-y-4 sm:gap-4 text-white">
+					<div class="center text-center">
 						<img onclick="startApp(this)" width="64" height="64" src="./appsIcon/youtube.jpg" class="rounded-full w-16 h-16 cursor-pointer">
 						<span class="text-sm mt-1 center">YouTube</span>
 					</div>
-					<div class="center">
-						<img onclick="startApp(this)" width="64" height="64" src="./appsIcon/ratp.png" class="rounded-full w-16 h-16 cursor-pointer">
-						<span class="text-sm mt-1 center">RATP</span>
+					<div class="center text-center">
+						<img onclick="startApp(this)" width="64" height="64" src="./appsIcon/hyperbeam.png" class="rounded-full w-16 h-16 cursor-pointer">
+						<span class="text-sm mt-1 center">Hyperbeam</span>
 					</div>
-					<div class="center">
+					<div class="center text-center">
 						<img onclick="doScreenshot(this)" width="64" height="64" src="./appsIcon/screenshot.png" class="rounded-full w-16 h-16 cursor-pointer">
 						<div id="screenshotApp_loader" class="w-8 h-8 border-4 border-teal-600 rounded-full loader hidden"></div>
 						<span class="text-sm mt-1 center">Capture</span>
 					</div>
-				</div>
-
-				<!-- Deuxième rangée -->
-				<div class="flex space-x-4">
-					<div class="center">
+					<div class="center text-center">
+						<img onclick="hideScreen()" width="64" height="64" src="./appsIcon/chhh.png" class="rounded-full w-16 h-16 cursor-pointer">
+						<span class="text-sm mt-1 center">Masquer écran</span>
+					</div>
+					<div class="center text-center">
+						<img onclick="castContent()" width="64" height="64" src="./appsIcon/cast.png" class="rounded-full w-16 h-16 cursor-pointer">
+						<span class="text-sm mt-1 center">Caster</span>
+					</div>
+					<!-- <div class="center text-center">
+						<img onclick="startApp(this)" width="64" height="64" src="./appsIcon/ratp.png" class="rounded-full w-16 h-16 cursor-pointer">
+						<span class="text-sm mt-1 center">RATP</span>
+					</div> -->
+					<!-- <div class="center text-center">
 						<img onclick="startApp(this)" width="64" height="64" src="./appsIcon/spotify.png" class="rounded-full w-16 h-16 cursor-pointer">
 						<span class="text-sm mt-1 center">Spotify</span>
-					</div>
-					<div class="center">
+					</div> -->
+					<!-- <div class="center text-center">
 						<img onclick="startApp(this)" width="64" height="64" src="./appsIcon/disneyplus.jpg" class="rounded-full w-16 h-16 cursor-pointer">
 						<span class="text-sm mt-1 center">Disney+</span>
-					</div>
-					<div class="center">
+					</div> -->
+					<!-- <div class="center text-center">
 						<img onclick="startApp(this)" width="64" height="64" src="./appsIcon/twitch.jpg" class="rounded-full w-16 h-16 cursor-pointer">
 						<span class="text-sm mt-1 center">Twitch</span>
-					</div>
-				</div>
-
-				<!-- Troisième rangée -->
-				<div class="flex space-x-4">
-					<div class="center">
+					</div> -->
+					<!-- <div class="center text-center">
 						<img onclick="startApp(this)" width="64" height="64" src="./appsIcon/molotov.jpg" class="rounded-full w-16 h-16 cursor-pointer">
 						<span class="text-sm mt-1 center">Molotov</span>
-					</div>
-					<div class="center">
+					</div> -->
+					<div class="center text-center">
 						<a href="https://contact.johanstick.me" target="_blank"><img width="64" height="64" src="./appsIcon/plus.png" class="rounded-full w-16 h-16 cursor-pointer"></a>
 						<span class="text-sm mt-1 center">Suggérer</span>
 					</div>
@@ -368,7 +530,7 @@
 
 	<!-- Boutons de contrôles -->
 	<div id="controlButtonContainer" style="width: 256px;">
-		<div class="controlButtonContainer">
+		<div class="controlButtonContainer text-white">
 			<div class="right-controlButton" style="margin-left: 0; margin-right: auto; max-width: 100px;">
 				<button actionName="back" class="controlButton rounded-full mr-4 mb-4" style="box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25), inset 0px 2px 1px rgba(255, 255, 255, 0.06); background-color: #1C1C1D; width: 100px; height: 100px;"><i style="font-size: 2rem;" class="center fas fa-angle-left" style="color: #fff;"></i></button>
 				<button actionName="pause" class="controlButton rounded-full mr-4 mb-4" style="box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25), inset 0px 2px 1px rgba(255, 255, 255, 0.06); background-color: #1C1C1D; width: 100px; height: 100px;"><i style="font-size: 1.2rem;" class="center fas fa-pause" style="color: #fff;"></i></button>
