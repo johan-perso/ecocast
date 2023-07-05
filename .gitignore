@@ -3,3 +3,4 @@ chromeUserData
 package-lock.json
 pnpm-lock.yaml
 videos/example.webm
+public/temp
