@@ -331,7 +331,6 @@
 		function castContent(){
 			showRemote()
 			socket.emit('cast')
-			// TODO: finir ça
 		}
 
 		// Si on clique ailleurs que dans le modal de la capture, la fermer
@@ -438,7 +437,7 @@
 
 	<!-- Opad -->
 	<div id="opadMain">
-		<img id="opad" src="./opad.png" width="256" height="256">
+		<img id="opad" src="./opad.png" width="256" height="256" oncontextmenu="return false;">
 	</div>
 
 	<!-- Demander un code de connexion -->
@@ -461,7 +460,7 @@
 	<div id="volumeIndicator" class="absolute left-0 z-0 hidden">
 		<div style="width:50px; height:200px; background: rgba(255,255,255,0.1); backdrop-filter: blur(5px); border-radius: 20px;">
 			<div id="volumeIndicator_progress" style="width:100%; background-color: rgba(255,255,255,0.9); position:absolute; border-bottom-right-radius: 20px; border-bottom-left-radius: 20px; border-top-right-radius: 8px; border-top-left-radius: 8px; bottom:0; height:70%""></div>
-			<p id="volumeIndicator_number" class="grid place-items-center mix-blend-difference">test</p>
+			<p id="volumeIndicator_number" class="grid place-items-center mix-blend-difference"></p>
 		</div>
 	</div>
 
@@ -513,7 +512,7 @@
 						<span class="text-sm mt-1 center">Molotov</span>
 					</div> -->
 					<div class="center text-center">
-						<a href="https://contact.johanstick.me" target="_blank"><img width="64" height="64" src="./appsIcon/plus.png" class="rounded-full w-16 h-16 cursor-pointer"></a>
+						<a href="https://johanstick.fr/contact" target="_blank"><img width="64" height="64" src="./appsIcon/plus.png" class="rounded-full w-16 h-16 cursor-pointer"></a>
 						<span class="text-sm mt-1 center">Suggérer</span>
 					</div>
 				</div>
