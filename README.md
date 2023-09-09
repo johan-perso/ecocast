@@ -115,7 +115,7 @@ Permet de choisir si EcoCast est démarré avec [un bloqueur de publicité](http
 > Type : `boolean`\
 > Choix : `true`, `false`
 
-Permet de choisir si le curseur de votre souris devrait être masqué lorsqu'EcoCast est démarré en plein écran.
+Permet de choisir si le curseur de votre souris devrait être caché lorsqu'EcoCast est démarré en plein écran.
 
 **homePage**
 
@@ -173,4 +173,4 @@ Permet de démarrer EcoCast à partir d'un chemin de navigateur personnalisé. S
 
 ### Licence
 
-MIT © [Johan](https://johanstick.me)
+MIT © [Johan](https://johanstick.fr)
