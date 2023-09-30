@@ -21,6 +21,7 @@ function waitForElm(selector) {
 window.onload = () => {
   if (document.querySelector('button[data-e2e="nav-login-button"]')) {
     alert("Vous n'êtes pas connecté à TikTok. Connectez-vous pour utiliser l'extension.")
+    document.body.classList.add("nc")
   } else {
     if (window.location.href.endsWith("/foryou")) waitForElm(".tiktok-1ok4pbl-ButtonActionItem").then(() => {
       setTimeout(() => {

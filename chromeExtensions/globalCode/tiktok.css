@@ -2,7 +2,7 @@ div:has(> div[data-e2e="search-comment-container"]), button[data-e2e="browse-clo
     display: none;
 }
 
-* {
+body:not(.nc) * {
     cursor: none !important;
 }
 
