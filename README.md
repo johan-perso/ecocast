@@ -45,6 +45,8 @@ Vous pourrez ensuite le lancer avec la commande `node index.js`.
 | Twitch        | Affiche le site de twitch.tv, optimisé pour TV                      | ❌    |
 | Molotov       | Vous laisse regarder les chaines de télévision                      | ❌    |
 | TikTok        | Accéder à TikTok avec un affichage TV                               | ✔️     |
+| Jellyfin      | Regarder vos films préféré depuis votre TV                          | ✔️     |
+
 
 
 

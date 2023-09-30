@@ -145,7 +145,7 @@ async function main(){
 			"--disable-features=IsolateOrigins",
 			"--disable-site-isolation-trials",
 			`--load-extension=${extensions.join(',')}`,
-			config.fullScreen == true ? "--start-fullscreen" : '',
+			config.fullScreen === true ? "--start-fullscreen" : '',
 		]
 	})
 

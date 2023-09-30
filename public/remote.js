@@ -233,10 +233,12 @@ window.onload = async function(){
     socket.emit('control', `keyboard_${key}`)
   }
   document.getElementById('virtualKeyboardInput').onkeydown = function(event){
+    if ((event.keyCode || event.charCode) === 8) return socket.emit('control', `keyboard_8`);
+
     // Obtenir le charcode
     var key =
         (
-            (event.keyCode || event.charCode) != '229'
+            (event.keyCode || event.charCode) !== 229
         ) ?
             (event.keyCode || event.charCode) : (
                 event?.originalEvent?.data?.charCodeAt(0) ||
@@ -244,11 +246,10 @@ window.onload = async function(){
             )
 
     // Si on appuie pas sur entrer ou backspace
-    if(key != 13 && key != 8) return;
+    if(key !== 13) return;
 
     // Clear l'input
     document.getElementById('virtualKeyboardInput').value = ''
-
     // Envoyer la touche
     socket.emit('control', `keyboard_${key}`)
   }
