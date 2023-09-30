@@ -1,0 +1,14 @@
+div:has(> div[data-e2e="search-comment-container"]), button[data-e2e="browse-close"], div:has(> form[data-e2e="search-box"]), button[data-e2e="arrow-right"], button[data-e2e="arrow-left"], div:has(> button[data-e2e="browse-sound"]), div[data-e2e="browse-ellipsis"], #tiktok-verify-ele, .captcha_verify_container {
+    display: none;
+}
+
+* {
+    cursor: none !important;
+}
+
+#tiktok-verify-ele {
+    display: none !important;
+    z-index: -1111 !important;
+    position: absolute !important;
+    bottom: 1000vh !important;
+}

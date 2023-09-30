@@ -31,19 +31,21 @@ Vous pourrez ensuite le lancer avec la commande `node index.js`.
 
 ### Applications disponible
 
-| Nom            | Description                                                        | Statut |
-|----------------|--------------------------------------------------------------------|--------|
-| YouTube        | Permet d'accéder à YouTube en affichage TV                         | ✔️     |
-| Hyperbeam      | Rejoint une salle Hyperbeam contrôlé par un autre utilisateur      | ✔️     |
-| RATP           | Affiche en temps réel les heures d'arrivés des bus, RER et métro.  | 🟠     |
-| Capture        | Effectue une capture d'écran d'EcoCast                             | ✔️     |
-| Masquer écran  | Masque l'écran d'EcoCast en le remplaçant par l'écran de veille    | ✔️     |
-| Caster         | Partage un contenu sur l'écran depuis la télécommande virtuelle    | ✔️     |
-| Plex           | Lance Plex WEB, avec quelques ajouts pour une meilleure immersivité| ❌     |
-| Spotify        | Permet d'écouter des musiques via Spotify                          | ❌     |
-| Disney+        | Lance une application Disney+                                      | ❌     |
-| Twitch         | Affiche le site de twitch.tv, optimisé pour TV                     | ❌     |
-| Molotov        | Vous laisse regarder les chaines de télévision                     | ❌     |
+| Nom           | Description                                                         | Statut |
+|---------------|---------------------------------------------------------------------|-------|
+| YouTube       | Permet d'accéder à YouTube en affichage TV                          | ✔️    |
+| Hyperbeam     | Rejoint une salle Hyperbeam contrôlé par un autre utilisateur       | ✔️    |
+| RATP          | Affiche en temps réel les heures d'arrivés des bus, RER et métro.   | 🟠    |
+| Capture       | Effectue une capture d'écran d'EcoCast                              | ✔️    |
+| Masquer écran | Masque l'écran d'EcoCast en le remplaçant par l'écran de veille     | ✔️    |
+| Caster        | Partage un contenu sur l'écran depuis la télécommande virtuelle     | ✔️    |
+| Plex          | Lance Plex WEB, avec quelques ajouts pour une meilleure immersivité | ❌    |
+| Spotify       | Permet d'écouter des musiques via Spotify                           | ❌    |
+| Disney+       | Lance une application Disney+                                       | ❌    |
+| Twitch        | Affiche le site de twitch.tv, optimisé pour TV                      | ❌    |
+| Molotov       | Vous laisse regarder les chaines de télévision                      | ❌    |
+| TikTok        | Accéder à TikTok avec un affichage TV                               | ✔️     |
+
 
 
 ### Comment ?
