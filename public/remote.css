@@ -1,0 +1,39 @@
+/* Police d'écriture */
+p,h1,h2,h3,h4,h5,h6,span {
+    font-family: 'Inter';
+}
+
+/* Body qui prend toute la place */
+:root {
+    --app-height: 100%;
+}
+
+body {
+    width: 100vw;
+    height: 92vh;
+}
+
+/* Loader */
+@keyframes loader-rotate{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+.loader{border-right-color:transparent;animation:loader-rotate 1s linear infinite}
+
+/* Centrer un div (sans flex) */
+.center {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+    grid-template-areas: "center";
+    justify-items: center;
+    align-items: center;
+}
+
+/* Bouton de contrôles */
+.controlButtonContainer {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: 1fr;
+    grid-column-gap: 0px;
+    grid-row-gap: 0px;
+}
+.right-controlButton { grid-area: 1 / 1 / 4 / 2; }
+.left-controlButton { grid-area: 1 / 2 / 4 / 3; }

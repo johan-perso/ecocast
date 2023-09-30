@@ -172,7 +172,8 @@ Permet de démarrer EcoCast à partir d'un chemin de navigateur personnalisé. S
 - [x] Créer des captures d'écran de l'EcoCast, depuis la télécommande virtuelle
 - [x] Partager des contenus de la télécommande à l'écran
 
+### Contributeurs
+![GitHub Contributors Image](https://contrib.rocks/image?repo=johan-perso/ecocast)
 
 ### Licence
-
 MIT © [Johan](https://johanstick.fr)

@@ -1,5 +1,5 @@
 // Importer quelques librairies
-const puppeteer = require('puppeteer'); var browser
+const puppeteer = require('puppeteer'); let browser
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
@@ -8,12 +8,13 @@ const clipboardy = require('clipboardy')
 
 // Importer la configuration
 const config = require('jsonc').parse(fs.readFileSync(path.join(__dirname, 'config.jsonc')).toString())
+let apps = {};
 
 // Importer quelques autres librairies liés au serveur web
 const http = require('http')
 const express = require("express")
 const app = express()
-var multer = require('multer');
+const multer = require('multer');
 const storage = multer.diskStorage({
 	destination: function (req, file, cb){
 		cb(null, 'public/temp')
@@ -26,19 +27,22 @@ const upload = multer({ storage: storage });
 const server = http.createServer(app)
 const { Server } = require("socket.io")
 const io = new Server(server)
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'pages'))
 
 // Créer un dossier temporaire s'il n'existe pas, s'il existe, le vider
 if(!fs.existsSync(path.join(__dirname, 'public', 'temp'))) fs.mkdirSync(path.join(__dirname, 'public', 'temp'))
 else fs.readdirSync(path.join(__dirname, 'public', 'temp')).forEach(file => fs.unlinkSync(path.join(__dirname, 'public', 'temp', file)))
 
 // Préparer un serveur web avec ExpressJS
-var port = 3510
+let port = 3510
 server.on('error', (err) => {
 	if(err.code == 'EADDRINUSE' || err.code == 'EACCES') setTimeout(() => {
 		port += 500
 		tryToStartServer()
 	}, 1000)
-})
+});
+
 function tryToStartServer(){
 	console.log(`Démarrage du serveur web sur le port ${port}...`)
 	server.listen(process.env.PORT || config.port || port || 3510, () => {
@@ -49,155 +53,48 @@ function tryToStartServer(){
 		clipboardy.writeSync(`http://${ipAddr}:${server.address().port}`)
 		main()
 	})
-}; tryToStartServer()
+} tryToStartServer()
 
-// Fonction pour obtenir le chemin du navigateur à utiliser
-var browserPath
-async function getBrowserPath(){
-	// Si une variable d'enviroment est définie, l'utiliser
-	if(config?.browserPath?.length && config.browserPath != "none"){
-		browserPath = config.browserPath
-		return browserPath
-	}
-
-	// Préparer la liste des chemins de potentiel navigateur
-	let browserPaths = []
-
-	// Ajouter des chemins de navigateur
-		// Sous Windows
-		if(os.platform() == 'win32'){
-			browserPaths.push(path.join(process.env.ProgramFiles, 'Google', 'Chrome', 'Application', 'chrome.exe'))
-			browserPaths.push(path.join(process.env['ProgramFiles(x86)'], 'Microsoft', 'Edge', 'Application', 'msedge.exe'))
-			browserPaths.push(path.join(process.env.ProgramFiles, 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe'))
-		}
-
-		// Sous Linux (pas testé)
-		if(os.platform() == 'linux'){
-			browserPaths.push('/usr/bin/google-chrome')
-			browserPaths.push('/usr/bin/chromium')
-		}
-
-		// Sous macOS (pas testé)
-		if(os.platform() == 'darwin'){
-			browserPaths.push('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
-			browserPaths.push('/Applications/Chromium.app/Contents/MacOS/Chromium')
-		}
-
-	// Tester si les chemins existent
-	browserPaths.forEach(browserPath => {
-		if(!fs.existsSync(browserPath)) browserPaths = browserPaths.filter(path => path != browserPath)
-	})
-	
-	// Si on a trouvé aucun navigateur, retourner null
-	if(browserPaths.length == 0) browserPath = null
-	
-	// Sinon, demander le navigateur à utiliser
-	else {
-		// Si on a trouvé qu'un seul navigateur, l'utiliser
-		if(browserPaths.length == 1) browserPath = browserPaths[0]
-		
-		// Sinon on utilise inquirer pour demander
-		else {
-			const inquirer = require('inquirer')
-			const { browser } = await inquirer.prompt({
-				type: 'list',
-				name: 'browser',
-				message: 'Quel navigateur voulez-vous utiliser ?',
-				choices: browserPaths
-			})
-			browserPath = browser
-		}
-	}
-
-	// Retourner le chemin du navigateur
-	return browserPath
-}
-
-// Générer un code unique à 5 chiffres pour la connexion à EcoCast depuis un autre appareil
-const alphabet = [
-	{ char: '1', surrounding: ['2','4'] }, { char: '2', surrounding: ['1','3','5'] },
-	{ char: '3', surrounding: ['2','6'] }, { char: '4', surrounding: ['1','5','7'] }, { char: '5', surrounding: ['4','6'] },
-	{ char: '6', surrounding: ['3','5','9'] }, { char: '7', surrounding: ['4','8'] }, { char: '8', surrounding: ['7','9'] },
-	{ char: '9', surrounding: ['8','0','6'] }, { char: '0', surrounding: ['9','8'] }
-]
-function generateCode(){
-	// Générer tout les caractères
-	var code = ''
-	for(var i = 0; i < 5; i++){
-        if(!code) code += alphabet[Math.floor(Math.random() * alphabet.length)].char
-        else {
-            var lastChar = code[code.length - 1]
-            var lastCharIndex = alphabet.findIndex(char => char.char === lastChar)
-            var surrounding = alphabet[lastCharIndex].surrounding
-            var char = surrounding[Math.floor(Math.random() * surrounding.length)]
-            code += char
-        }
-	}
-
-	// On retourne le code
-	return code
-}
-var uniquesCodes = []
-
-// Fonction pour obtenir son IP local
-function getIPAdress(){
-	// Préparer un array d'IP locales
-	var listIps = []
-
-	// Obtenir toute les interfaces
-	var interfaces = os.networkInterfaces()
-	for(var devName in interfaces){
-		var iface = interfaces[devName]
-		for(var i = 0; i < iface.length; i++){
-			var alias = iface[i]
-			if(alias.family === 'IPv4'){
-				listIps.push(alias.address)
-			}
-		}
-	}
-
-	// Enlever les IPs qui ne commencent pas par 192.168.1.
-	listIps = listIps.filter(ip => ip.startsWith("192.168.1."))
-
-	// Retourner l'IP locale
-	return listIps[0] || '127.0.0.1'
-}; ipAddr = getIPAdress()
+let uniquesCodes = []
+ipAddr = require('./utilities/getIpAddress')();
 
 // Routes pour le serveur web
 app.get('/sleep', async (req, res) => {
-	res.send(fs.readFileSync(path.join(__dirname, 'public', 'sleep.html')).toString().replace(/%REMOTE_LOCATION%/g, `http://${ipAddr}:${server.address().port}`))
+	res.render("sleep", { REMOTE_LOCATION: `http://${ipAddr}:${server.address().port}` })
 })
 app.get('/filepreview', async (req, res) => {
-	res.send(fs.readFileSync(path.join(__dirname, 'public', 'filepreview.html')).toString())
+	res.send(fs.readFileSync(path.join(__dirname, 'pages', 'filepreview.html')).toString())
 })
 app.get('/', async (req, res) => {
-	res.send(fs.readFileSync(path.join(__dirname, 'public', 'remote.html')).toString())
+	res.render('remote', { apps });
 })
 app.get('/wallpaperList', async (req, res) => {
 	if(config.screensaverType == 'diaporama') res.send(fs.readFileSync(path.join(__dirname, 'public', 'wallpaperList.txt')).toString())
 	if(config.screensaverType.startsWith('video:')) res.send(`video: ${config.screensaverType.replace('video:','')}`)
 })
-app.get('/opad.png', async (req, res) => {
-	res.sendFile(path.join(__dirname, 'public', 'opad.png'))
-})
-app.get('/style.css', async (req, res) => {
-	res.sendFile(path.join(__dirname, 'public', 'style.css'))
-})
-app.use('/appsIcon', express.static(path.join(__dirname, 'public', 'appsIcon')))
-app.use('/app/ratp', express.static(path.join(__dirname, 'public', 'ratp-app')))
-app.use('/videos', express.static(path.join(__dirname, 'public', 'videos'))) // Inutilisé, mais j'garde au cas où quelqu'un veut l'utiliser pour servir des vidéos (config.screensaverType)
-app.use('/public/temp', express.static(path.join(__dirname, 'public', 'temp')))
+
+app.use('/app/ratp', express.static(path.join(__dirname, 'pages', 'ratp-app')))
+// app.use('/videos', express.static(path.join(__dirname, 'public', 'videos'))) // Inutilisé, mais j'garde au cas où quelqu'un veut l'utiliser pour servir des vidéos (config.screensaverType)
+app.use('/public', express.static(path.join(__dirname, 'public')));
 
 // Fonction principale
 async function main(){
 	// Définir le chemin du navigateur à utiliser
-	await getBrowserPath()
+	let browserPath = await require("./utilities/getBrowserPath")()
+
+	// Récuperer la liste des applications
+	let appsDir = fs.readdirSync(path.join(__dirname, 'apps'));
+	appsDir.forEach(app => {
+		let name = app.toLowerCase();
+		name = name.slice(0, -3);
+		apps[name] = require(path.join(__dirname, 'apps', app));
+	});
 
 	// Si Chromium avait crash lors de la dernière utilisation, modifier cela
-	if(fs.existsSync(path.join(__dirname, 'chromeUserData'))){
+	if(fs.existsSync(path.join(__dirname, 'chromeUserData'))) {
 		// Lire les préférences et le Local State
-		var preferences
-		var localState
+		let preferences
+		let localState
 		try {
 			preferences = fs.readFileSync(path.join(__dirname, 'chromeUserData', 'Default', 'Preferences'))
 			localState = fs.readFileSync(path.join(__dirname, 'chromeUserData', 'Default', 'Local State'))
@@ -213,17 +110,17 @@ async function main(){
 	}
 
 	// Préparer la liste des extensions à charger
-		// Préparer un array vide
-		var extensions = []
+	// Préparer un array vide
+	let extensions = []
 
-		// Ajouter uBlock s'il n'est pas désactivé
-		if(config.adBlock) extensions.push(path.join(__dirname, 'chromeExtensions','uBlockOrigin'))
+	// Ajouter uBlock s'il n'est pas désactivé
+	if(config.adBlock) extensions.push(path.join(__dirname, 'chromeExtensions','uBlockOrigin'))
 
-		// Ajouter hideCursor s'il n'est pas désactivé
-		if(config.hideCursor) extensions.push(path.join(__dirname, 'chromeExtensions','hideCursor'))
+	// Ajouter hideCursor s'il n'est pas désactivé
+	if(config.hideCursor) extensions.push(path.join(__dirname, 'chromeExtensions','hideCursor'))
 
-		// Rajoute une extension peut importe la configuration
-		extensions.push(path.join(__dirname, 'chromeExtensions','globalCode'))
+	// Rajoute une extension peut importe la configuration
+	extensions.push(path.join(__dirname, 'chromeExtensions','globalCode'))
 
 	// Crée le navigateur
 	browser = await puppeteer.launch({
@@ -263,7 +160,7 @@ async function main(){
 	})
 
 	// Ouvrir une page
-	var page = await browser.newPage();
+	let page = await browser.newPage();
 	page.setUserAgent('Mozilla/5.0 (SMART-TV; Linux; Tizen 4.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.2924.0 Safari/537.36')
 
 	// Fermer la page par défaut
@@ -272,7 +169,6 @@ async function main(){
 	// Naviguer vers le site
 	if(config.homePage == 'youtube') await page.goto(`https://youtube.com/tv`, { timeout: 0 })
 	else if(config.homePage == 'ratp') await page.goto(`http://${ipAddr}:${server.address().port}/app/ratp/chooseLine.html`, { timeout: 0 })
-	else if (config.homePage == 'tiktok') await page.goto("https://www.tiktok.com/foryou", { timeout: 0 })
 	else await page.goto(`http://${ipAddr}:${server.address().port}/sleep`, { timeout: 0 })
 
 	// Route pour l'API - générer et afficher un nouveau code unique
@@ -284,7 +180,7 @@ async function main(){
 		if(uniquesCodes.length > 15) uniquesCodes.splice(0, 5)
 
 		// Générer un code unique (et le copier dans le presse-papier)
-		var code = generateCode()
+		let code = require("./utilities/generateCode")()
 		uniquesCodes.push(code)
 		clipboardy.writeSync(code)
 
@@ -310,7 +206,7 @@ async function main(){
 	app.get('/api/screenshot', async (req, res) => {
 		// Vérifier qu'un code a été donné
 		if(config.associationProtection != 'none' && !req?.query?.code) return res.set('Content-Type', 'application/json').send({ error: true, message: "Aucun code donné" })
-		var code = req?.query?.code
+		let code = req?.query?.code
 
 		// Si le code ne fais pas parti de la liste des codes uniques
 		if(config.associationProtection == 'uniqueCode' && !uniquesCodes.includes(code)){
@@ -319,12 +215,12 @@ async function main(){
 
 		// Si la protection est un mot de passe, le vérifier
 		if(config.associationProtection.startsWith('password:')){
-			var password = config.associationProtection.split(':')[1];
+			let password = config.associationProtection.split(':')[1];
 			if(password != code) return res.set('Content-Type', 'application/json').send({ error: true, message: "Mot de passe incorrect" })
 		}
 
 		// Faire une capture d'écran de la page principale
-		var screenshot = await page.screenshot({ encoding: "base64" })
+		let screenshot = await page.screenshot({ encoding: "base64" })
 
 		// Retourner la capture d'écran
 		res.set('Content-Type', 'text/plain').send(`data:image/png;base64,${screenshot}`)
@@ -334,7 +230,7 @@ async function main(){
 	app.post('/api/castFile', async (req, res) => {
 		// Vérifier qu'un code a été donné
 		if(config.associationProtection != 'none' && !req?.query?.code) return res.set('Content-Type', 'application/json').send({ error: true, message: "Aucun code donné" })
-		var code = req?.query?.code
+		let code = req?.query?.code
 
 		// Si le code ne fais pas parti de la liste des codes uniques
 		if(config.associationProtection == 'uniqueCode' && !uniquesCodes.includes(code)){
@@ -343,7 +239,7 @@ async function main(){
 
 		// Si la protection est un mot de passe, le vérifier
 		if(config.associationProtection.startsWith('password:')){
-			var password = config.associationProtection.split(':')[1];
+			let password = config.associationProtection.split(':')[1];
 			if(password != code) return res.set('Content-Type', 'application/json').send({ error: true, message: "Mot de passe incorrect" })
 		}
 
@@ -375,10 +271,10 @@ async function main(){
 	})
 
 	// Socket pour gérer certains élements d'EcoCast à distance
-	var allSockets = []
+	let allSockets = []
 	io.of('/socket').on('connection', async socket => {
 		// Obtenir le code dans les queries
-		var code = socket.handshake.query.uniqueCode;
+		let code = socket.handshake.query.uniqueCode;
 
 		// Si le code ne fais pas parti de la liste des codes uniques
 		if(config.associationProtection == 'uniqueCode' && !uniquesCodes.includes(code)){
@@ -388,7 +284,7 @@ async function main(){
 
 		// Si la protection est un mot de passe, le vérifier
 		if(config.associationProtection.startsWith('password:')){
-			var password = config.associationProtection.split(':')[1];
+			let password = config.associationProtection.split(':')[1];
 			if(password != code) return socket.emit('error', "Le mot de passe est incorrect, actualiser la page et réessayer.") && socket.disconnect();
 		}
 
@@ -436,7 +332,6 @@ async function main(){
 			if(action == "middle") await page.keyboard.press('Enter')
 
 			// Bouton du haut
-			console.log(page.url)
 			if(action == "up") await page.keyboard.press('ArrowUp')
 
 			// Bouton du bas
@@ -457,148 +352,7 @@ async function main(){
 				let key = action.replace('keyboard_', '')
 
 				// Mapper le keyCode en touche comphréhensible par puppeteer
-				let keyCode = {
-					"8": "Backspace",
-					"9": "Tab",
-					"13": "Enter",
-					"16": "Shift",
-					"17": "Control",
-					"18": "Alt",
-					"19": "Pause",
-					"27": "Escape",
-					"32": "Space",
-					"33": "!",
-					"34": "\"",
-					"35": "#",
-					"36": "$",
-					"37": "%",
-					"38": "&",
-					"39": "'",
-					"40": "(",
-					"41": ")",
-					"42": "*",
-					"43": "+",
-					"44": ",",
-					"45": "-",
-					"46": ".",
-					"47": "/",
-					"48": "0",
-					"49": "1",
-					"50": "2",
-					"51": "3",
-					"52": "4",
-					"53": "5",
-					"54": "6",
-					"55": "7",
-					"56": "8",
-					"57": "9",
-					"58": ":",
-					"59": ";",
-					"60": "<",
-					"61": "=",
-					"62": ">",
-					"63": "?",
-					"64": "@",
-					"65": "A",
-					"66": "B",
-					"67": "C",
-					"68": "D",
-					"69": "E",
-					"70": "F",
-					"71": "G",
-					"72": "H",
-					"73": "I",
-					"74": "J",
-					"75": "K",
-					"76": "L",
-					"77": "M",
-					"78": "N",
-					"79": "O",
-					"80": "P",
-					"81": "Q",
-					"82": "R",
-					"83": "S",
-					"84": "T",
-					"85": "U",
-					"86": "V",
-					"87": "W",
-					"88": "X",
-					"89": "Y",
-					"90": "Z",
-					"91": "[",
-					"92": "\\",
-					"93": "]",
-					"94": "^",
-					"95": "_",
-					"96": "`",
-					"97": "a",
-					"98": "b",
-					"99": "c",
-					"100": "d",
-					"101": "e",
-					"102": "f",
-					"103": "g",
-					"104": "h",
-					"105": "i",
-					"106": "j",
-					"107": "k",
-					"108": "l",
-					"109": "m",
-					"110": "n",
-					"111": "o",
-					"112": "p",
-					"113": "q",
-					"114": "r",
-					"115": "s",
-					"116": "t",
-					"117": "u",
-					"118": "v",
-					"119": "w",
-					"120": "x",
-					"121": "y",
-					"122": "z",
-					"123": "{",
-					"124": "|",
-					"125": "}",
-					"126": "~",
-					"127": "Delete",
-					"173": "-",
-					"186": ";",
-					"187": "=",
-					"188": ",",
-					"189": "-",
-					"190": ".",
-					"191": "/",
-					"192": "`",
-					"219": "[",
-					"220": "\\",
-					"221": "]",
-					"222": "'",
-					"223": "`",
-					"226": "\\",
-					"229": "\\",
-					"246": "|",
-					"247": "\"",
-					"248": "\"",
-					"251": "}",
-					"252": "\"",
-					"256": "~",
-					"257": "!",
-					"258": "\"",
-					"259": "#",
-					"260": "$",
-					"261": "%",
-					"262": "&",
-					"263": "'",
-					"264": "(",
-					"265": ")",
-					"266": "*",
-					"267": "+",
-					"268": ",",
-					"269": "-",
-					"270": ".",
-					"271": "/"
-				}
+				let keyCode = { "8": "Backspace", "9": "Tab", "13": "Enter", "16": "Shift", "17": "Control", "18": "Alt", "19": "Pause", "27": "Escape", "32": "Space", "33": "!", "34": "\"", "35": "#", "36": "$", "37": "%", "38": "&", "39": "'", "40": "(", "41": ")", "42": "*", "43": "+", "44": ",", "45": "-", "46": ".", "47": "/", "48": "0", "49": "1", "50": "2", "51": "3", "52": "4", "53": "5", "54": "6", "55": "7", "56": "8", "57": "9", "58": ":", "59": ";", "60": "<", "61": "=", "62": ">", "63": "?", "64": "@", "65": "A", "66": "B", "67": "C", "68": "D", "69": "E", "70": "F", "71": "G", "72": "H", "73": "I", "74": "J", "75": "K", "76": "L", "77": "M", "78": "N", "79": "O", "80": "P", "81": "Q", "82": "R", "83": "S", "84": "T", "85": "U", "86": "V", "87": "W", "88": "X", "89": "Y", "90": "Z", "91": "[", "92": "\\", "93": "]", "94": "^", "95": "_", "96": "`", "97": "a", "98": "b", "99": "c", "100": "d", "101": "e", "102": "f", "103": "g", "104": "h", "105": "i", "106": "j", "107": "k", "108": "l", "109": "m", "110": "n", "111": "o", "112": "p", "113": "q", "114": "r", "115": "s", "116": "t", "117": "u", "118": "v", "119": "w", "120": "x", "121": "y", "122": "z", "123": "{", "124": "|", "125": "}", "126": "~", "127": "Delete", "173": "-", "186": ";", "187": "=", "188": ",", "189": "-", "190": ".", "191": "/", "192": "`", "219": "[", "220": "\\", "221": "]", "222": "'", "223": "`", "226": "\\", "229": "\\", "246": "|", "247": "\"", "248": "\"", "251": "}", "252": "\"", "256": "~", "257": "!", "258": "\"", "259": "#", "260": "$", "261": "%", "262": "&", "263": "'", "264": "(", "265": ")", "266": "*", "267": "+", "268": ",", "269": "-", "270": ".", "271": "/"}
 
 				// Envoyer la clé
 				try {
@@ -619,7 +373,7 @@ async function main(){
 			// Bouton pour augmenter le son système
 			if(action == "volumeUp"){
 				// Obtenir l'ancien volume
-				var oldVolume = await loudness.getVolume();
+				let oldVolume = await loudness.getVolume();
 
 				// Démute
 				await loudness.setMuted(false)
@@ -636,7 +390,7 @@ async function main(){
 			// Bouton pour baisser le son système
 			if(action == "volumeDown"){
 				// Obtenir l'ancien volume
-				var oldVolume = await loudness.getVolume();
+				let oldVolume = await loudness.getVolume();
 
 				// Démute
 				await loudness.setMuted(false)
@@ -653,7 +407,7 @@ async function main(){
 			// Bouton pour rendre le son système muet
 			if(action == "mute"){
 				// Obtenir l'ancien statut
-				var oldMute = await loudness.getMuted()
+				let oldMute = await loudness.getMuted()
 
 				// Inverser le statut
 				await loudness.setMuted(!oldMute)
@@ -667,14 +421,14 @@ async function main(){
 				// Inverser le statut de pause
 				await page.evaluate(() => {
 					// Tenter pour une vidéo
-					var video = document.querySelector('video')
+					let video = document.querySelector('video')
 					if(video){
 						if(video.paused) video.play();
 						else video.pause()
 					}
 
 					// Tenter pour un audio
-					var audio = document.querySelector('audio')
+					let audio = document.querySelector('audio')
 					if(audio){
 						if(audio.paused) audio.play();
 						else audio.pause()
@@ -685,7 +439,7 @@ async function main(){
 			// Bouton pour retourner en arrière
 			if(action == "back"){
 				// Obtenir l'URL de la page
-				var url = page.url()
+				let url = page.url()
 				console.log(url)
 
 				// Si on est sur YouTube TV, appuyer sur échap
@@ -702,11 +456,11 @@ async function main(){
 		})
 
 		// Si on veut masquer l'application en cours
-		var isHidden = false
+		let isHidden = false
 		socket.on('hideScreen', async () => {
 			// Si l'application n'est pas déjà masquée
 			if(!isHidden){
-				var page = await browser.newPage()
+				let page = await browser.newPage()
 				await page.goto(`http://${ipAddr}:${server.address().port}/sleep?skipAnimation=true`, { timeout: 0 }) // On ouvre une nouvelle page sur l'écran de veille
 				isHidden = true
 			}
@@ -797,94 +551,8 @@ async function main(){
 
 		// Quand le socket veut ouvrir une application
 		socket.on('startApp', async (app) => {
-			console.log(app)
-
-			// Si l'application est YouTube
-			if(app == "youtube") try { await page.goto('https://youtube.com/tv', { timeout: 0 }) } catch(err){}
-
-			// Si l'application est TikTok
-			if(app == "tiktok") try { await page.goto('https://www.tiktok.com/foryou', { timeout: 0 }) } catch(err){}
-
-			// Si l'application est RATP
-			if(app == "ratp") socket.emit('error', `RATP n'est pas encore supporté, mais vous pourriez finir son développement vous-même 🙃 https://github.com/johan-perso/ecocast`)
-			// if(app == "ratp") await page.goto(`http://${ipAddr}:${server.address().port}/app/ratp/chooseLine.html`, { timeout: 0 })
-
-			// Si l'application est Hyperbeam
-			if(app == "hyperbeam"){
-				socket.emit('askModal',
-					"Session Hyperbeam",
-					"Entrer le code d'une session Hyperbeam déjà existante pour la rejoindre",
-					[
-						{
-							type: "url",
-							placeholder: "Code/URL de la session",
-							required: true,
-							id: 'code'
-						},
-						{
-							type: "text",
-							placeholder: "Nom d'utilisateur",
-							required: false,
-							id: 'username'
-						}
-					],
-					async (response) => {
-						// Si on a pas de code, on arrête
-						if(!response.code) return
-
-						// Aller sur la page et attendre qu'elle charge
-						await page.goto(response.code.startsWith('https://hyperbeam.com/') ? response.code : `https://hyperbeam.com/app/invite/${response.code}`, { timeout: 0, waitUntil: 'networkidle0' })
-
-						// Cocher la validation d'âge
-						try {
-							await page.click('div.inviteCards_nX2Ux div.internetAdultContainer_3CtfY > div > div')
-						} catch(err){}
-
-						// Ecrire le nom d'utilisateur puis rejoindre
-						try {
-							if(response.username){
-								await page.$eval('div.displayNameInput_1PDBo input', el => el.value = '')
-								await page.type('div.displayNameInput_1PDBo input', response.username)
-							}
-							await page.click('div.inviteCards_nX2Ux div.footer_3Yiou > button')
-						} catch(err){}
-
-						// Attendre qu'on soit sur la page de la session
-						try {
-							await page.waitForSelector('.vmContainer_utWdv > video')
-						} catch(err){}
-
-						// Si on nous affiche le guide, le fermer
-						try {
-							await page.evaluate(() => {
-								document.querySelector("#app > div.wrapper_1fzOe.roomInfoCard_2fgp2 div.dialog-footer > button").click()
-							})
-						} catch(err){}
-
-						// Passer en "plein écran"
-						try {
-							await page.evaluate(() => {
-								document.querySelector("div.chatContainer_1z3kq").remove() // chat
-								document.querySelector("div.vmControls_1Z7US > div.rightControls_47NFz button:nth-child(3)").click() // passer en mode théâtre
-								document.querySelector("div.vmControls_1Z7US").remove() // supprimer les contrôles (volume, plein écran, théâtre, réglages, ...)
-								document.querySelector("div.resizer_sfC_W").remove() // truc à glisser pour redimensionner le chat
-							})
-						} catch(err){}
-					}
-				)
-			}
-
-			// Si l'application est Spotify
-			if(app == "spotify") socket.emit('error', `Spotify n'est pas encore supporté, mais vous pourriez le développer vous-même 🙃 https://github.com/johan-perso/ecocast`)
-
-			// Si l'application est Disney+
-			if(app == "disney+") socket.emit('error', `Disney+ n'est pas encore supporté, mais vous pourriez le développer vous-même 🙃 https://github.com/johan-perso/ecocast`)
-
-			// Si l'application est Twitch
-			if(app == "twitch") socket.emit('error', `Twitch n'est pas encore supporté, mais vous pourriez le développer vous-même 🙃 https://github.com/johan-perso/ecocast`)
-
-			// Si l'application est Molotov
-			if(app == "molotov") socket.emit('error', `Molotov n'est pas encore supporté, mais vous pourriez le développer vous-même 🙃 https://github.com/johan-perso/ecocast`)
+			if (apps[app]) return apps[app].execute(socket, page, server, ipAddr)
+			else socket.emit('error', "L'application n'existe pas")
 		})
 	})
 }

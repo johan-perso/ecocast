@@ -6,14 +6,15 @@
 	"scripts": {
 		"dev": "nodemon index.js",
 		"start": "node index.js",
-		"build_tailwindcss": "npx tailwindcss -i ./public/pre_styles-tailwind.css -o ./public/style.css",
-		"watch_tailwindcss": "npx tailwindcss -i ./public/pre_styles-tailwind.css -o ./public/style.css --watch"
+		"build_tailwindcss": "npx tailwindcss -i ./public/pre_styles-tailwind.css -o public/style.css",
+		"watch_tailwindcss": "npx tailwindcss -i ./public/pre_styles-tailwind.css -o public/style.css --watch"
 	},
 	"author": "JohanStickman",
 	"license": "MIT",
 	"dependencies": {
 		"clipboardy": "2.3.0",
 		"daisyui": "^3.1.7",
+		"ejs": "^3.1.9",
 		"express": "^4.17.3",
 		"inquirer": "8.2.4",
 		"jsonc": "^2.0.0",
