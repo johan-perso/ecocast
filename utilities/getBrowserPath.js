@@ -2,6 +2,8 @@ const os = require("os");
 const path = require("path");
 const fs = require("fs");
 const inquirer = require("inquirer");
+const config = require('jsonc').parse(fs.readFileSync(path.join(__dirname, '../config.jsonc')).toString())
+
 
 module.exports = async () => {
   let browserPath;

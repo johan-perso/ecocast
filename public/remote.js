@@ -58,6 +58,16 @@ async function connectToSocket(code){
     alert(error)
   })
 
+  socket.on("battery", function(battery){
+    if (isNaN(battery)) return;
+    battery = Math.round(battery * 100);
+    if (battery >= 70) document.getElementById("battery").innerHTML = `<i data-lucide="battery-full"></i><span style="margin-left: 0.25rem;">${battery}%</span>`
+    else if (battery >= 40 && battery < 70) document.getElementById("battery").innerHTML = `<i data-lucide="battery-medium"></i><span style="margin-left: 0.25rem;">${battery}%</span>`
+    else if (battery >= 10 && battery < 40) document.getElementById("battery").innerHTML = `<i data-lucide="battery-low"></i><span style="margin-left: 0.25rem;">${battery}%</span>`
+    else if (battery < 10) document.getElementById("battery").innerHTML = `<i data-lucide="battery-warning"></i><span style="margin-left: 0.25rem;">${battery}%</span>`
+    lucide.createIcons();
+  })
+
   // Quand le volume est changé
   var clearVolumeTimeout;
   socket.on('volume', function(volume){
@@ -193,6 +203,9 @@ function opadClick(clientX, clientY, offsetLeft, offsetTop){
 
 // Quand la page est chargée
 window.onload = async function(){
+  // Créer les icones Lucide
+  lucide.createIcons();
+
   // Quand on clique sur l'opad
   document.getElementById('opad').onclick = function(){
     opadClick(event.clientX, event.clientY, this.offsetLeft, this.offsetTop)

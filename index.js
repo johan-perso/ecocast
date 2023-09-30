@@ -276,6 +276,23 @@ async function main(){
 		// Obtenir le code dans les queries
 		let code = socket.handshake.query.uniqueCode;
 
+		let batteryLevel = 1;
+		require("battery-level")().then(level => {
+			if (level != batteryLevel) {
+				batteryLevel = level;
+				socket.emit('battery', level)
+			}
+		})
+
+		setInterval(() => {
+			require("battery-level")().then(level => {
+				if (level != batteryLevel) {
+					batteryLevel = level;
+					socket.emit('battery', level)
+				}
+			})
+		}, 1000)
+
 		// Si le code ne fais pas parti de la liste des codes uniques
 		if(config.associationProtection == 'uniqueCode' && !uniquesCodes.includes(code)){
 			socket.emit('error', "Le code d'association est incorrect, actualiser la page et réessayer.");
