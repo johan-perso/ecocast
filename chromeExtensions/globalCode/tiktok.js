@@ -30,9 +30,6 @@ window.onload = () => {
           document.querySelector(".captcha_verify_container").remove();
           document.querySelector("#tiktok-verify-ele").remove();
         }
-        document.addEventListener("keypress", (e) => {
-          if(e.key === "Enter") document.querySelector('span[data-e2e=browse-like-icon]').parentElement.click()
-        })
       }, 2000)
     })
   }

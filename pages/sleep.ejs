@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html data-theme="dark" class="bg-base-300">
+<head>
+    <!-- Quelques trucs -->
+    <title>EcoCast</title>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="public/style.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+
+    <!-- Un peu de JS -->
+    <script src="public/sleep.js"></script>
+
+    <!-- Un peu de CSS -->
+    <link rel="stylesheet" href="public/sleep.css">
+
+    <!-- Meta tag pour les réseaux -->
+    <meta property="og:title" content="EcoCast">
+</head>
+<body class="w-screen h-screen">
+<!-- Information fullscreen -->
+<div id="welcomeScreen" class="grid w-full h-full place-items-center fixed left-0 top-0 bg-no-repeat bg-center bg-cover">
+    <div class="absolute bg-black opacity-80 inset-0 z-0"></div>
+    <div class="relative text-center">
+        <h1 id="welcomeScreenTitle" class="text-5xl text-white font-semibold">Bienvenue !</h1>
+        <p id="welcomeScreenSubtitle" class="text-xl text-blue-400 mt-2"><%= REMOTE_LOCATION %></p>
+    </div>
+</div>
+
+<!-- Heure et date (en bas à droite) -->
+<div class="timeContainer">
+    <p class="time"></p>
+    <p class="date"></p>
+</div>
+</div>
+</body>
+</html>
