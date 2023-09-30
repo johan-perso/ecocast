@@ -14,6 +14,12 @@
 			"matches": ["*://hyperbeam.com/*"],
 			"css": ["hyperbeam.css"],
 			"run_at": "document_idle"
+		},
+		{
+			"matches": ["*://www.tiktok.com/*"],
+			"js": ["tiktok.js"],
+			"css": ["tiktok.css"],
+			"run_at": "document_idle"
 		}
 	],
 	"web_accessible_resources": [{

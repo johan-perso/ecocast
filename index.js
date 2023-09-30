@@ -272,6 +272,7 @@ async function main(){
 	// Naviguer vers le site
 	if(config.homePage == 'youtube') await page.goto(`https://youtube.com/tv`, { timeout: 0 })
 	else if(config.homePage == 'ratp') await page.goto(`http://${ipAddr}:${server.address().port}/app/ratp/chooseLine.html`, { timeout: 0 })
+	else if (config.homePage == 'tiktok') await page.goto("https://www.tiktok.com/foryou", { timeout: 0 })
 	else await page.goto(`http://${ipAddr}:${server.address().port}/sleep`, { timeout: 0 })
 
 	// Route pour l'API - générer et afficher un nouveau code unique
@@ -800,6 +801,9 @@ async function main(){
 
 			// Si l'application est YouTube
 			if(app == "youtube") try { await page.goto('https://youtube.com/tv', { timeout: 0 }) } catch(err){}
+
+			// Si l'application est TikTok
+			if(app == "tiktok") try { await page.goto('https://www.tiktok.com/foryou', { timeout: 0 }) } catch(err){}
 
 			// Si l'application est RATP
 			if(app == "ratp") socket.emit('error', `RATP n'est pas encore supporté, mais vous pourriez finir son développement vous-même 🙃 https://github.com/johan-perso/ecocast`)
