@@ -59,7 +59,7 @@ async function connectToSocket(code){
   })
 
   socket.on("battery", function(battery){
-    if (isNaN(battery)) return;
+    if (isNaN(battery) || battery === null) return;
     battery = Math.round(battery * 100);
     if (battery >= 70) document.getElementById("battery").innerHTML = `<i data-lucide="battery-full"></i><span style="margin-left: 0.25rem;">${battery}%</span>`
     else if (battery >= 40 && battery < 70) document.getElementById("battery").innerHTML = `<i data-lucide="battery-medium"></i><span style="margin-left: 0.25rem;">${battery}%</span>`

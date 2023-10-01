@@ -278,7 +278,7 @@ async function main(){
 
 		let batteryLevel = 1;
 		require("battery-level")().then(level => {
-			if (level != batteryLevel) {
+			if (level !== batteryLevel) {
 				batteryLevel = level;
 				socket.emit('battery', level)
 			}
@@ -286,12 +286,13 @@ async function main(){
 
 		setInterval(() => {
 			require("battery-level")().then(level => {
-				if (level != batteryLevel) {
+				if (level !== batteryLevel) {
 					batteryLevel = level;
 					socket.emit('battery', level)
 				}
 			})
 		}, 1000)
+
 
 		// Si le code ne fais pas parti de la liste des codes uniques
 		if(config.associationProtection == 'uniqueCode' && !uniquesCodes.includes(code)){
