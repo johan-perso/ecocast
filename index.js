@@ -66,7 +66,7 @@ app.get('/filepreview', async (req, res) => {
 	res.send(fs.readFileSync(path.join(__dirname, 'pages', 'filepreview.html')).toString())
 })
 app.get('/', async (req, res) => {
-	res.render('remote', { apps });
+	res.render('remote', { apps, c: config });
 })
 app.get('/wallpaperList', async (req, res) => {
 	if(config.screensaverType == 'diaporama') res.send(fs.readFileSync(path.join(__dirname, 'public', 'wallpaperList.txt')).toString())

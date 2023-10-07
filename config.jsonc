@@ -32,5 +32,32 @@
 	"associationProtection": "uniqueCode",
 
 	// Chemin du navigateur Chromium personnalisé | défaut : none
-	"browserPath": "none"
+	"browserPath": "none",
+
+	// Configuration pour l'affichage des applications sur la télécommande.
+	"apps": {
+	    // Afficher l'application YouTube | défaut : true
+	    "youtube": true,
+
+	    // Afficher l'application Hyperbeam | défaut : true
+	    "hyperbeam": true,
+
+	    // Afficher l'application TikTok | défaut : true
+        "tiktok": true,
+
+        // Afficher l'application Jellyfin | défaut : true
+        "jellyfin": true,
+
+	    // Afficher l'application Capture | défaut : true
+	    "screenshot": true,
+
+	    // Afficher l'application Masquer écran | défaut : true
+	    "hide_screen": true,
+
+	    // Afficher l'application Caster | défaut : true
+	    "cast": true,
+
+	    // Afficher l'application Suggérer | défaut : true
+	    "suggest": true
+	}
 }

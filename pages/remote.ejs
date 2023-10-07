@@ -64,29 +64,39 @@
             <div class="grid grid-rows-3 grid-cols-3 md:grid-cols-5 gap-x-2 gap-y-4 sm:gap-4 text-white">
                 <% Object.entries(apps).forEach(app => { %>
                     <% if (app[1].hidden === false) { %>
-                        <div class="center text-center">
-                            <img onclick="startApp(this)" width="64" height="64" src="./public/icons/<%= app[1].icon %>" class="rounded-full w-16 h-16 cursor-pointer">
-                            <span class="text-sm mt-1 center"><%= app[1].name %></span>
-                        </div>
+                        <% if (c.apps[app[0]]) { %>
+                            <div class="center text-center">
+                                <img onclick="startApp(this)" width="64" height="64" src="./public/icons/<%= app[1].icon %>" class="rounded-full w-16 h-16 cursor-pointer">
+                                <span class="text-sm mt-1 center"><%= app[1].name %></span>
+                            </div>
+                        <% }%>
                     <% } %>
                 <% }) %>
-                <div class="center text-center">
-                    <img onclick="doScreenshot(this)" width="64" height="64" src="./public/icons/screenshot.png" class="rounded-full w-16 h-16 cursor-pointer">
-                    <div id="screenshotApp_loader" class="w-8 h-8 border-4 border-teal-600 rounded-full loader hidden"></div>
-                    <span class="text-sm mt-1 center">Capture</span>
-                </div>
-                <div class="center text-center">
-                    <img onclick="hideScreen()" width="64" height="64" src="./public/icons/chhh.png" class="rounded-full w-16 h-16 cursor-pointer">
-                    <span class="text-sm mt-1 center">Masquer écran</span>
-                </div>
-                <div class="center text-center">
-                    <img onclick="castContent()" width="64" height="64" src="./public/icons/cast.png" class="rounded-full w-16 h-16 cursor-pointer">
-                    <span class="text-sm mt-1 center">Caster</span>
-                </div>
-                <div class="center text-center">
-                    <a href="https://johanstick.fr/contact" target="_blank"><img width="64" height="64" src="./public/icons/plus.png" class="rounded-full w-16 h-16 cursor-pointer"></a>
-                    <span class="text-sm mt-1 center">Suggérer</span>
-                </div>
+                <% if (c.apps.screenshot === true) { %>
+                    <div class="center text-center">
+                        <img onclick="doScreenshot(this)" width="64" height="64" src="./public/icons/screenshot.png" class="rounded-full w-16 h-16 cursor-pointer">
+                        <div id="screenshotApp_loader" class="w-8 h-8 border-4 border-teal-600 rounded-full loader hidden"></div>
+                        <span class="text-sm mt-1 center">Capture</span>
+                    </div>
+                <% } %>
+                <% if (c.apps.hide_screen === true) { %>
+                    <div class="center text-center">
+                        <img onclick="hideScreen()" width="64" height="64" src="./public/icons/chhh.png" class="rounded-full w-16 h-16 cursor-pointer">
+                        <span class="text-sm mt-1 center">Masquer écran</span>
+                    </div>
+                <% } %>
+                <% if (c.apps.cast === true) { %>
+                    <div class="center text-center">
+                        <img onclick="castContent()" width="64" height="64" src="./public/icons/cast.png" class="rounded-full w-16 h-16 cursor-pointer">
+                        <span class="text-sm mt-1 center">Caster</span>
+                    </div>
+                <% } %>
+                <% if (c.apps.suggest === true) { %>
+                    <div class="center text-center">
+                        <a href="https://johanstick.fr/contact" target="_blank"><img width="64" height="64" src="./public/icons/plus.png" class="rounded-full w-16 h-16 cursor-pointer"></a>
+                        <span class="text-sm mt-1 center">Suggérer</span>
+                    </div>
+                <% } %>
             </div>
         </div>
     </div>
