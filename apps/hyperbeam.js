@@ -2,7 +2,7 @@ module.exports = {
   name: "Hyperbeam",
   icon: "hyperbeam.png",
   hidden: false,
-  execute: async (socket, page, server, ipAddr) => {
+  execute: async (socket, page, server, ipAddr, config) => {
     socket.emit('askModal',
         "Session Hyperbeam",
         "Entrer le code d'une session Hyperbeam déjà existante pour la rejoindre",

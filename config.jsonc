@@ -59,5 +59,8 @@
 
 	    // Afficher l'application Suggérer | défaut : true
 	    "suggest": true
-	}
+	},
+
+    // L'instance Jellyfin à utiliser | défaut : none
+	"jellyfin_instance": "none"
 }

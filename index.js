@@ -569,7 +569,7 @@ async function main(){
 
 		// Quand le socket veut ouvrir une application
 		socket.on('startApp', async (app) => {
-			if (apps[app]) return apps[app].execute(socket, page, server, ipAddr)
+			if (apps[app]) return apps[app].execute(socket, page, server, ipAddr, config)
 			else socket.emit('error', "L'application n'existe pas")
 		})
 	})
