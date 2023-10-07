@@ -34,6 +34,12 @@
 	// Chemin du navigateur Chromium personnalisé | défaut : none
 	"browserPath": "none",
 
+	// Configuration du Richpresence Discord | défaut : true
+	"discord_rpc": true,
+
+	// Client ID de l'application Discord | défaut : none
+	"discord_client_id": "none",
+
 	// Configuration pour l'affichage des applications sur la télécommande.
 	"apps": {
 	    // Afficher l'application YouTube | défaut : true

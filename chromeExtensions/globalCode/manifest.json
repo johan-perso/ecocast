@@ -20,6 +20,11 @@
 			"js": ["tiktok.js"],
 			"css": ["tiktok.css"],
 			"run_at": "document_idle"
+		},
+		{
+			"matches": ["<all_urls>"],
+			"js": ["richpresence.js"],
+			"run_at": "document_idle"
 		}
 	],
 	"web_accessible_resources": [{

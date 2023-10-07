@@ -10,6 +10,9 @@ const clipboardy = require('clipboardy')
 const config = require('jsonc').parse(fs.readFileSync(path.join(__dirname, 'config.jsonc')).toString())
 let apps = {};
 
+// Importer la librairie pour le Discord Rich Presence
+const rpc_client = require('discord-rich-presence')((config.discord_client_id === "none" || !config.discord_client_id) ? "1160323336753127564" : config.discord_client_id);
+
 // Importer quelques autres librairies liés au serveur web
 const http = require('http')
 const express = require("express")
@@ -165,6 +168,60 @@ async function main(){
 
 	// Fermer la page par défaut
 	Array.from(await browser.pages())[0].close()
+
+	let launchTime = Date.now()
+	page.on('console', msg => {
+		if (config.discord_rpc !== true) return;
+		if (msg.type() !== "log") return;
+		let text = msg.text();
+		if (!text.startsWith("RPC Changed")) return;
+
+		let site = text.split(" - ")[1];
+		site = site.toLowerCase();
+		site = site.replaceAll(" ", "");
+
+		if (site === "youtube") {
+			rpc_client.updatePresence({
+				state: 'Regarde YouTube',
+				startTimestamp: launchTime,
+				largeImageKey: 'youtube',
+				instance: true,
+				buttons: [
+					{ label: 'Github Repository', url: `https://github.com/johan-perso/ecocast` }
+				]
+			});
+		} else if (site === "tiktok") {
+			rpc_client.updatePresence({
+				state: 'Regarde TikTok',
+				startTimestamp: launchTime,
+				largeImageKey: 'tiktok',
+				instance: true,
+				buttons: [
+					{ label: 'Github Repository', url: `https://github.com/johan-perso/ecocast` }
+				]
+			});
+		} else if (site === "jellyfin") {
+			rpc_client.updatePresence({
+				state: 'Regarde Jellyfin',
+				startTimestamp: launchTime,
+				largeImageKey: 'jellyfin',
+				instance: true,
+				buttons: [
+					{ label: 'Github Repository', url: `https://github.com/johan-perso/ecocast` }
+				]
+			});
+		} else {
+			rpc_client.updatePresence({
+				state: 'En veille',
+				startTimestamp: launchTime,
+				largeImageKey: 'sleep',
+				instance: true,
+				buttons: [
+					{ label: 'Github Repository', url: `https://github.com/johan-perso/ecocast` }
+				]
+			});
+		}
+	})
 
 	// Naviguer vers le site
 	if(config.homePage == 'youtube') await page.goto(`https://youtube.com/tv`, { timeout: 0 })
