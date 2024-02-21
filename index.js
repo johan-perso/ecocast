@@ -334,22 +334,23 @@ async function main(){
 		let code = socket.handshake.query.uniqueCode;
 
 		let batteryLevel = 1;
-		require("battery-level")().then(level => {
-			if (level !== batteryLevel) {
-				batteryLevel = level;
-				socket.emit('battery', level)
-			}
-		})
-
-		setInterval(() => {
-			require("battery-level")().then(level => {
-				if (level !== batteryLevel) {
-					batteryLevel = level;
-					socket.emit('battery', level)
-				}
-			})
-		}, 1000)
-
+		var batteryLevelInterval;
+		try {
+			batteryLevelInterval = setInterval(() => {
+				require("battery-level")().then(level => {
+					if (level !== batteryLevel) {
+						batteryLevel = level;
+						socket.emit('battery', level)
+					}
+				}).catch(err => {
+					console.log("Impossible de récupérer le niveau de batterie de l'appareil")
+					clearInterval(batteryLevelInterval)
+				})
+			}, 1000)
+		} catch (error) {
+			console.log("Impossible de récupérer le niveau de batterie de l'appareil")
+			clearInterval(batteryLevelInterval)
+		}
 
 		// Si le code ne fais pas parti de la liste des codes uniques
 		if(config.associationProtection == 'uniqueCode' && !uniquesCodes.includes(code)){
