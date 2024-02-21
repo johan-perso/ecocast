@@ -1,6 +1,6 @@
 {
 	"name": "ecocast",
-	"version": "0.5.0-beta",
+	"version": "0.6.0-beta",
 	"description": "EcoCast vous permet de lancer des 'applications' TV sur un ordinateur.",
 	"main": "index.js",
 	"scripts": {
